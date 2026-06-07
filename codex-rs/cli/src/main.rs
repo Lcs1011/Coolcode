@@ -1967,58 +1967,83 @@ fn reject_root_base_mode_usage(
     root_remote: Option<&str>,
     root_remote_auth_token_env: Option<&str>,
 ) -> anyhow::Result<()> {
-    if !root_base_mode {
+    let requested_base_mode = root_base_mode || subcommand_requests_base_mode(subcommand);
+
+    if !requested_base_mode {
         return Ok(());
     }
 
-    // --base-mode cannot be combined with --remote.
-    if root_remote.is_some() || root_remote_auth_token_env.is_some() {
+    if root_remote.is_some() {
+        anyhow::bail!("`--remote` cannot be used with `--base-mode`");
+    }
+
+    if root_remote_auth_token_env.is_some() {
+        anyhow::bail!("`--remote-auth-token-env` cannot be used with `--base-mode`");
+    }
+
+    if interactive.web_search {
+        anyhow::bail!("`--search` cannot be used with `--base-mode`");
+    }
+
+    if !interactive.images.is_empty() {
+        anyhow::bail!("`--image` cannot be used with `--base-mode`");
+    }
+
+    if !interactive.add_dir.is_empty() {
+        anyhow::bail!("`--add-dir` cannot be used with `--base-mode`");
+    }
+
+    if interactive.dangerously_bypass_approvals_and_sandbox {
         anyhow::bail!(
-            "`--base-mode` cannot be used together with `--remote` or `--remote-auth-token-env`"
+            "`--dangerously-bypass-approvals-and-sandbox` cannot be used with `--base-mode`"
         );
     }
 
-    let base_child = subcommand_requests_base_mode(interactive, subcommand);
-    match subcommand {
-        None => {
-            // Interactive TUI: base mode is implicitly inherited.
-        }
-        Some(sub) => {
-            if !base_child {
-                let name = subcommand_name_for_base_mode_rejection(sub);
-                reject_base_mode_for_subcommand(root_base_mode, name)?;
-            }
-        }
+    if interactive.bypass_hook_trust {
+        anyhow::bail!("`--dangerously-bypass-hook-trust` cannot be used with `--base-mode`");
     }
 
-    Ok(())
+    if interactive.oss {
+        anyhow::bail!("`--oss` cannot be used with `--base-mode`");
+    }
+
+    if interactive.oss_provider.is_some() {
+        anyhow::bail!("`--local-provider` cannot be used with `--base-mode`");
+    }
+
+    reject_base_mode_for_subcommand(requested_base_mode, subcommand)
 }
 
-/// Returns true if the (subcommand, interactive) pair explicitly requests
-/// `--base-mode` via `interactive.base_mode` or the subcommand's own override.
-fn subcommand_requests_base_mode(
-    interactive: &TuiCli,
-    subcommand: &Option<Subcommand>,
-) -> bool {
-    if interactive.base_mode {
-        return true;
-    }
+/// Returns true if the subcommand explicitly requests `--base-mode`.
+fn subcommand_requests_base_mode(subcommand: &Option<Subcommand>) -> bool {
     match subcommand {
-        Some(Subcommand::Resume(ResumeCommand { config_overrides, .. }))
-        | Some(Subcommand::Fork(ForkCommand { config_overrides, .. })) => {
-            config_overrides.base_mode
-        }
+        Some(Subcommand::Resume(ResumeCommand {
+            config_overrides, ..
+        })) => config_overrides.base_mode,
+        Some(Subcommand::Fork(ForkCommand {
+            config_overrides, ..
+        })) => config_overrides.base_mode,
         _ => false,
     }
 }
 
-fn reject_base_mode_for_subcommand(base_mode: bool, subcommand: &str) -> anyhow::Result<()> {
-    if base_mode {
-        anyhow::bail!(
-            "`--base-mode` is not supported for `codex {subcommand}`"
-        );
+fn reject_base_mode_for_subcommand(
+    base_mode: bool,
+    subcommand: &Option<Subcommand>,
+) -> anyhow::Result<()> {
+    if !base_mode {
+        return Ok(());
     }
-    Ok(())
+
+    match subcommand {
+        None | Some(Subcommand::Login(_)) | Some(Subcommand::Logout(_)) => Ok(()),
+        Some(subcommand) => {
+            let name = subcommand_name_for_base_mode_rejection(subcommand);
+            anyhow::bail!(
+                "`--base-mode` only supports the interactive TUI and account commands; it cannot be used with `codex {name}`"
+            );
+        }
+    }
 }
 
 fn subcommand_name_for_base_mode_rejection(subcommand: &Subcommand) -> &'static str {
@@ -2054,7 +2079,7 @@ fn subcommand_name_for_base_mode_rejection(subcommand: &Subcommand) -> &'static 
 }
 
 fn debug_subcommand_name_for_base_mode_rejection(debug: &DebugCommand) -> &'static str {
-    match debug.subcommand {
+    match &debug.subcommand {
         DebugSubcommand::Models(_) => "debug models",
         DebugSubcommand::AppServer(_) => "debug app-server",
         DebugSubcommand::PromptInput(_) => "debug prompt-input",
