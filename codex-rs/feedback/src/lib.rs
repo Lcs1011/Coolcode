@@ -102,62 +102,15 @@ impl<'a> FeedbackRequestSnapshot<'a> {
     }
 }
 
-pub fn emit_feedback_request_tags(tags: &FeedbackRequestTags<'_>) {
-    let snapshot = FeedbackRequestSnapshot::from_tags(tags);
-    tracing::info!(
-        target: FEEDBACK_TAGS_TARGET,
-        endpoint = tracing::field::debug(snapshot.endpoint),
-        auth_header_attached = tracing::field::debug(snapshot.auth_header_attached),
-        auth_header_name = tracing::field::debug(snapshot.auth_header_name),
-        auth_mode = tracing::field::debug(snapshot.auth_mode),
-        auth_retry_after_unauthorized = tracing::field::debug(&snapshot.auth_retry_after_unauthorized),
-        auth_recovery_mode = tracing::field::debug(snapshot.auth_recovery_mode),
-        auth_recovery_phase = tracing::field::debug(snapshot.auth_recovery_phase),
-        auth_connection_reused = tracing::field::debug(&snapshot.auth_connection_reused),
-        auth_request_id = tracing::field::debug(snapshot.auth_request_id),
-        auth_cf_ray = tracing::field::debug(snapshot.auth_cf_ray),
-        auth_error = tracing::field::debug(snapshot.auth_error),
-        auth_error_code = tracing::field::debug(snapshot.auth_error_code),
-        auth_recovery_followup_success = tracing::field::debug(&snapshot.auth_recovery_followup_success),
-        auth_recovery_followup_status = tracing::field::debug(&snapshot.auth_recovery_followup_status),
-    );
+pub fn emit_feedback_request_tags(_tags: &FeedbackRequestTags<'_>) {
+    // Feedback telemetry disabled in secure build.
 }
 
 pub fn emit_feedback_request_tags_with_auth_env(
-    tags: &FeedbackRequestTags<'_>,
-    auth_env: &AuthEnvTelemetry,
+    _tags: &FeedbackRequestTags<'_>,
+    _auth_env: &AuthEnvTelemetry,
 ) {
-    let snapshot = FeedbackRequestSnapshot::from_tags(tags);
-    tracing::info!(
-        target: FEEDBACK_TAGS_TARGET,
-        endpoint = tracing::field::debug(snapshot.endpoint),
-        auth_header_attached = tracing::field::debug(snapshot.auth_header_attached),
-        auth_header_name = tracing::field::debug(snapshot.auth_header_name),
-        auth_mode = tracing::field::debug(snapshot.auth_mode),
-        auth_retry_after_unauthorized = tracing::field::debug(&snapshot.auth_retry_after_unauthorized),
-        auth_recovery_mode = tracing::field::debug(snapshot.auth_recovery_mode),
-        auth_recovery_phase = tracing::field::debug(snapshot.auth_recovery_phase),
-        auth_connection_reused = tracing::field::debug(&snapshot.auth_connection_reused),
-        auth_request_id = tracing::field::debug(snapshot.auth_request_id),
-        auth_cf_ray = tracing::field::debug(snapshot.auth_cf_ray),
-        auth_error = tracing::field::debug(snapshot.auth_error),
-        auth_error_code = tracing::field::debug(snapshot.auth_error_code),
-        auth_recovery_followup_success = tracing::field::debug(&snapshot.auth_recovery_followup_success),
-        auth_recovery_followup_status = tracing::field::debug(&snapshot.auth_recovery_followup_status),
-        auth_env_openai_api_key_present = tracing::field::debug(auth_env.openai_api_key_env_present),
-        auth_env_codex_api_key_present = tracing::field::debug(auth_env.codex_api_key_env_present),
-        auth_env_codex_api_key_enabled = tracing::field::debug(auth_env.codex_api_key_env_enabled),
-        // Custom provider `env_key` is arbitrary config text, so emit only a safe bucket.
-        auth_env_provider_key_name = tracing::field::debug(
-            auth_env.provider_env_key_name.as_deref().unwrap_or("")
-        ),
-        auth_env_provider_key_present = tracing::field::debug(
-            &auth_env.provider_env_key_present.map_or_else(String::new, |value| value.to_string())
-        ),
-        auth_env_refresh_token_url_override_present = tracing::field::debug(
-            auth_env.refresh_token_url_override_present
-        ),
-    );
+    // Feedback telemetry disabled in secure build.
 }
 
 #[derive(Clone)]
@@ -416,74 +369,8 @@ impl FeedbackSnapshot {
 
     /// Upload feedback to Sentry with optional attachments.
     pub fn upload_feedback(&self, options: FeedbackUploadOptions<'_>) -> Result<()> {
-        use std::str::FromStr;
-        use std::sync::Arc;
-
-        use sentry::Client;
-        use sentry::ClientOptions;
-        use sentry::protocol::Envelope;
-        use sentry::protocol::EnvelopeItem;
-        use sentry::protocol::Event;
-        use sentry::protocol::Level;
-        use sentry::transports::DefaultTransportFactory;
-        use sentry::types::Dsn;
-
-        // Build Sentry client
-        let client = Client::from_config(ClientOptions {
-            dsn: Some(Dsn::from_str(SENTRY_DSN).map_err(|e| anyhow!("invalid DSN: {e}"))?),
-            transport: Some(Arc::new(DefaultTransportFactory {})),
-            ..Default::default()
-        });
-
-        let tags = self.upload_tags(
-            options.classification,
-            options.reason,
-            options.tags,
-            options.session_source.as_ref(),
-        );
-
-        let level = match options.classification {
-            "bug" | "bad_result" | "safety_check" => Level::Error,
-            _ => Level::Info,
-        };
-
-        let mut envelope = Envelope::new();
-        let title = format!(
-            "[{}]: Codex session {}",
-            display_classification(options.classification),
-            self.thread_id
-        );
-
-        let mut event = Event {
-            level,
-            message: Some(title.clone()),
-            tags,
-            ..Default::default()
-        };
-        if let Some(r) = options.reason {
-            use sentry::protocol::Exception;
-            use sentry::protocol::Values;
-
-            event.exception = Values::from(vec![Exception {
-                ty: title,
-                value: Some(r.to_string()),
-                ..Default::default()
-            }]);
-        }
-        envelope.add_item(EnvelopeItem::Event(event));
-
-        for attachment in self.feedback_attachments(
-            options.include_logs,
-            options.extra_attachments,
-            options.extra_attachment_paths,
-            options.logs_override,
-        ) {
-            envelope.add_item(EnvelopeItem::Attachment(attachment));
-        }
-
-        client.send_envelope(envelope);
-        client.flush(Some(Duration::from_secs(UPLOAD_TIMEOUT_SECS)));
-        Ok(())
+        let _ = (self, options);
+        Err(anyhow!("feedback upload disabled in Eidolon secure build"))
     }
 
     fn upload_tags(
