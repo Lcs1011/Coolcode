@@ -160,6 +160,13 @@ fn build_tool_specs_and_registry(
     turn_context: &TurnContext,
     params: ToolRouterParams<'_>,
 ) -> (Vec<ToolSpec>, ToolRegistry) {
+    if turn_context.config.base_mode {
+        let _ = params;
+        return (
+            Vec::new(),
+            ToolRegistry::from_tools(Vec::<PlannedRuntime>::new()),
+        );
+    }
     let ToolRouterParams {
         mcp_tools,
         deferred_mcp_tools,

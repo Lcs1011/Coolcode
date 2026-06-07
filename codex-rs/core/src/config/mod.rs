@@ -617,6 +617,12 @@ pub struct Config {
     /// Optionally specify the personality of the model
     pub personality: Option<Personality>,
 
+    /// Safe empty-capability mode.
+    ///
+    /// When true, the model must not receive any tool specs and the runtime
+    /// must not register any local tools.
+    pub base_mode: bool,
+
     /// Effective permission configuration for shell tool execution.
     pub permissions: Permissions,
 
@@ -2243,6 +2249,7 @@ pub struct ConfigOverrides {
     pub show_raw_agent_reasoning: Option<bool>,
     pub tools_web_search_request: Option<bool>,
     pub ephemeral: Option<bool>,
+    pub base_mode: Option<bool>,
     pub bypass_hook_trust: Option<bool>,
     /// Additional directories that should be treated as writable roots for this session.
     pub additional_writable_roots: Vec<PathBuf>,
@@ -2632,10 +2639,12 @@ impl Config {
             show_raw_agent_reasoning,
             tools_web_search_request: override_tools_web_search_request,
             ephemeral,
+            base_mode,
             bypass_hook_trust,
             additional_writable_roots,
             workspace_roots: workspace_roots_override,
         } = overrides;
+        let base_mode = base_mode.unwrap_or_default();
         let bypass_hook_trust = bypass_hook_trust.unwrap_or_default();
 
         if bypass_hook_trust {
@@ -3525,6 +3534,7 @@ impl Config {
             config_layer_stack,
             history,
             ephemeral: ephemeral.unwrap_or_default(),
+            base_mode,
             bypass_hook_trust,
             file_opener: cfg.file_opener.unwrap_or(UriBasedFileOpener::VsCode),
             codex_self_exe,

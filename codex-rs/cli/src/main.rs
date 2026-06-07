@@ -683,7 +683,7 @@ fn format_exit_messages(exit_info: AppExitInfo, color_enabled: bool) -> Vec<Stri
 }
 
 /// Handle the app exit and print the results. Optionally run the update action.
-fn handle_app_exit(exit_info: AppExitInfo) -> anyhow::Result<()> {
+fn handle_app_exit(exit_info: AppExitInfo, base_mode: bool) -> anyhow::Result<()> {
     match exit_info.exit_reason {
         ExitReason::Fatal(message) => {
             eprintln!("ERROR: {message}");
@@ -697,6 +697,11 @@ fn handle_app_exit(exit_info: AppExitInfo) -> anyhow::Result<()> {
     for line in format_exit_messages(exit_info, color_enabled) {
         println!("{line}");
     }
+
+    if base_mode {
+        return Ok(());
+    }
+
     if let Some(action) = update_action {
         run_update_action(action)?;
     }
@@ -914,6 +919,16 @@ async fn cli_main(arg0_paths: Arg0DispatchPaths) -> anyhow::Result<()> {
     let root_remote = remote.remote;
     let root_remote_auth_token_env = remote.remote_auth_token_env;
     let root_strict_config = interactive.strict_config;
+    let root_base_mode = interactive.base_mode;
+
+    reject_root_base_mode_usage(
+        root_base_mode,
+        &interactive,
+        &subcommand,
+        root_remote.as_deref(),
+        root_remote_auth_token_env.as_deref(),
+    )?;
+
     reject_root_strict_config_for_subcommand(root_strict_config, &subcommand)?;
     if let Some(subcommand) = subcommand.as_ref() {
         profile_v2_for_subcommand(&interactive, subcommand)?;
@@ -921,6 +936,7 @@ async fn cli_main(arg0_paths: Arg0DispatchPaths) -> anyhow::Result<()> {
 
     match subcommand {
         None => {
+            let base_mode = interactive.base_mode;
             prepend_config_flags(
                 &mut interactive.config_overrides,
                 root_config_overrides.clone(),
@@ -932,7 +948,7 @@ async fn cli_main(arg0_paths: Arg0DispatchPaths) -> anyhow::Result<()> {
                 arg0_paths.clone(),
             )
             .await?;
-            handle_app_exit(exit_info)?;
+            handle_app_exit(exit_info, base_mode)?;
         }
         Some(Subcommand::Exec(mut exec_cli)) => {
             reject_remote_mode_for_subcommand(
@@ -1181,6 +1197,7 @@ async fn cli_main(arg0_paths: Arg0DispatchPaths) -> anyhow::Result<()> {
                 include_non_interactive,
                 config_overrides,
             );
+            let base_mode = interactive.base_mode;
             let exit_info = run_interactive_tui(
                 interactive,
                 remote.remote.or(root_remote.clone()),
@@ -1190,7 +1207,7 @@ async fn cli_main(arg0_paths: Arg0DispatchPaths) -> anyhow::Result<()> {
                 arg0_paths.clone(),
             )
             .await?;
-            handle_app_exit(exit_info)?;
+            handle_app_exit(exit_info, base_mode)?;
         }
         Some(Subcommand::Archive(cmd)) => {
             let output = run_session_archive_cli_command(
@@ -1233,6 +1250,7 @@ async fn cli_main(arg0_paths: Arg0DispatchPaths) -> anyhow::Result<()> {
                 all,
                 config_overrides,
             );
+            let base_mode = interactive.base_mode;
             let exit_info = run_interactive_tui(
                 interactive,
                 remote.remote.or(root_remote.clone()),
@@ -1242,7 +1260,7 @@ async fn cli_main(arg0_paths: Arg0DispatchPaths) -> anyhow::Result<()> {
                 arg0_paths.clone(),
             )
             .await?;
-            handle_app_exit(exit_info)?;
+            handle_app_exit(exit_info, base_mode)?;
         }
         Some(Subcommand::Login(mut login_cli)) => {
             reject_remote_mode_for_subcommand(
@@ -1938,6 +1956,111 @@ fn prepend_config_flags(
     cli_config_overrides: CliConfigOverrides,
 ) {
     subcommand_config_overrides.prepend_root_overrides(cli_config_overrides);
+}
+
+/// Reject `--base-mode` when used alongside `--remote` or `--remote-auth-token-env`
+/// or with unsupported subcommands.
+fn reject_root_base_mode_usage(
+    root_base_mode: bool,
+    interactive: &TuiCli,
+    subcommand: &Option<Subcommand>,
+    root_remote: Option<&str>,
+    root_remote_auth_token_env: Option<&str>,
+) -> anyhow::Result<()> {
+    if !root_base_mode {
+        return Ok(());
+    }
+
+    // --base-mode cannot be combined with --remote.
+    if root_remote.is_some() || root_remote_auth_token_env.is_some() {
+        anyhow::bail!(
+            "`--base-mode` cannot be used together with `--remote` or `--remote-auth-token-env`"
+        );
+    }
+
+    let base_child = subcommand_requests_base_mode(interactive, subcommand);
+    match subcommand {
+        None => {
+            // Interactive TUI: base mode is implicitly inherited.
+        }
+        Some(sub) => {
+            if !base_child {
+                let name = subcommand_name_for_base_mode_rejection(sub);
+                reject_base_mode_for_subcommand(root_base_mode, name)?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Returns true if the (subcommand, interactive) pair explicitly requests
+/// `--base-mode` via `interactive.base_mode` or the subcommand's own override.
+fn subcommand_requests_base_mode(
+    interactive: &TuiCli,
+    subcommand: &Option<Subcommand>,
+) -> bool {
+    if interactive.base_mode {
+        return true;
+    }
+    match subcommand {
+        Some(Subcommand::Resume(ResumeCommand { config_overrides, .. }))
+        | Some(Subcommand::Fork(ForkCommand { config_overrides, .. })) => {
+            config_overrides.base_mode
+        }
+        _ => false,
+    }
+}
+
+fn reject_base_mode_for_subcommand(base_mode: bool, subcommand: &str) -> anyhow::Result<()> {
+    if base_mode {
+        anyhow::bail!(
+            "`--base-mode` is not supported for `codex {subcommand}`"
+        );
+    }
+    Ok(())
+}
+
+fn subcommand_name_for_base_mode_rejection(subcommand: &Subcommand) -> &'static str {
+    match subcommand {
+        Subcommand::Exec(_) => "exec",
+        Subcommand::Review(_) => "review",
+        Subcommand::McpServer(_) => "mcp-server",
+        Subcommand::Mcp(_) => "mcp",
+        Subcommand::Plugin(_) => "plugin",
+        Subcommand::AppServer(_) => "app-server",
+        Subcommand::RemoteControl(_) => "remote-control",
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
+        Subcommand::App(_) => "app",
+        Subcommand::Resume(_) => "resume",
+        Subcommand::Archive(_) => "archive",
+        Subcommand::Unarchive(_) => "unarchive",
+        Subcommand::Fork(_) => "fork",
+        Subcommand::Login(_) => "login",
+        Subcommand::Logout(_) => "logout",
+        Subcommand::Completion(_) => "completion",
+        Subcommand::Update => "update",
+        Subcommand::Doctor(_) => "doctor",
+        Subcommand::Cloud(_) => "cloud",
+        Subcommand::Sandbox(_) => "sandbox",
+        Subcommand::Debug(debug) => debug_subcommand_name_for_base_mode_rejection(debug),
+        Subcommand::Execpolicy(_) => "execpolicy",
+        Subcommand::Apply(_) => "apply",
+        Subcommand::ResponsesApiProxy(_) => "responses-api-proxy",
+        Subcommand::StdioToUds(_) => "stdio-to-uds",
+        Subcommand::ExecServer(_) => "exec-server",
+        Subcommand::Features(_) => "features",
+    }
+}
+
+fn debug_subcommand_name_for_base_mode_rejection(debug: &DebugCommand) -> &'static str {
+    match debug.subcommand {
+        DebugSubcommand::Models(_) => "debug models",
+        DebugSubcommand::AppServer(_) => "debug app-server",
+        DebugSubcommand::PromptInput(_) => "debug prompt-input",
+        DebugSubcommand::TraceReduce(_) => "debug trace-reduce",
+        DebugSubcommand::ClearMemories => "debug clear-memories",
+    }
 }
 
 fn reject_remote_mode_for_subcommand(

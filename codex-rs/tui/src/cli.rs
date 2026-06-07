@@ -65,6 +65,10 @@ pub struct Cli {
     #[arg(long = "search", default_value_t = false)]
     pub web_search: bool,
 
+    /// Start Codex in BaseMode: no tools, no file read/write, no search, no shell.
+    #[arg(long = "base-mode", default_value_t = false)]
+    pub base_mode: bool,
+
     /// Disable alternate screen mode
     ///
     /// Runs the TUI in inline mode, preserving terminal scrollback history.
