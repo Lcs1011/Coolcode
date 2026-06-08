@@ -2821,19 +2821,9 @@ async fn mcp_http_probe_url_with_timeout(url: &str, timeout: Duration) -> Result
 
 async fn http_probe_url_with_timeout(url: &str, timeout: Duration) -> Result<String, String> {
     let request = build_reqwest_client().head(url).timeout(timeout);
-    let response = safe_network::send(NetworkPurpose::Diagnostics, request)
+    let response = safe_network::send(NetworkPurpose::Other, request)
         .await
-        .map_err(|err| {
-            if err.is_timeout() {
-                "request timed out".to_string()
-            } else if err.is_connect() {
-                "connect failed".to_string()
-            } else if err.is_builder() {
-                "request could not be built".to_string()
-            } else {
-                err.to_string()
-            }
-        })?;
+        .map_err(|err| err.to_string())?;
     Ok(format!("HTTP {}", response.status().as_u16()))
 }
 
@@ -2845,19 +2835,9 @@ async fn http_get_probe_url_with_timeout(url: &str, timeout: Duration) -> Result
 
 async fn http_get_probe_status_with_timeout(url: &str, timeout: Duration) -> Result<u16, String> {
     let request = build_reqwest_client().get(url).timeout(timeout);
-    let response = safe_network::send(NetworkPurpose::Diagnostics, request)
+    let response = safe_network::send(NetworkPurpose::Other, request)
         .await
-        .map_err(|err| {
-            if err.is_timeout() {
-                "request timed out".to_string()
-            } else if err.is_connect() {
-                "connect failed".to_string()
-            } else if err.is_builder() {
-                "request could not be built".to_string()
-            } else {
-                err.to_string()
-            }
-        })?;
+        .map_err(|err| err.to_string())?;
     Ok(response.status().as_u16())
 }
 

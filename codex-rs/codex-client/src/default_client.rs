@@ -1,4 +1,4 @@
-use codex_utils_safety::safe_network::NetworkPurpose;
+use codex_utils_safety::safe_network::{self, NetworkPurpose};
 use http::Error as HttpError;
 use http::HeaderMap;
 use http::HeaderName;

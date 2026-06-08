@@ -766,10 +766,13 @@ pub async fn start_remote_control(
     app_server_client_name_rx: Option<oneshot::Receiver<String>>,
     initial_enabled: bool,
 ) -> io::Result<(JoinHandle<()>, RemoteControlHandle)> {
-    safe_network::ensure_allowed(NetworkPurpose::Other)?;
     let state_db_available = state_db.is_some();
     let requested_initial_enabled = initial_enabled;
     let initial_enabled = initial_enabled && state_db_available;
+
+    if initial_enabled {
+        safe_network::ensure_allowed(NetworkPurpose::Other).map_err(io::Error::other)?;
+    }
     if requested_initial_enabled && !state_db_available {
         warn!("remote control disabled because sqlite state db is unavailable");
     }
