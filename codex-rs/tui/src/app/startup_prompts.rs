@@ -4,6 +4,7 @@
 //! catalog state into one-time TUI prompts or warning cells without owning the main event loop.
 
 use super::*;
+use ctool::CToolScope;
 use std::collections::HashSet;
 use std::path::PathBuf;
 
@@ -49,6 +50,34 @@ pub(super) fn emit_safe_mode_status(app_event_tx: &AppEventSender, config: &Conf
     app_event_tx.send(AppEvent::InsertHistoryCell(Box::new(
         history_cell::new_info_event(format!("SafeMode: {status}")),
     )));
+}
+
+pub(super) fn emit_permission_profile_status(app_event_tx: &AppEventSender, config: &Config) {
+    let status = permission_profile_status_name(config);
+    app_event_tx.send(AppEvent::InsertHistoryCell(Box::new(
+        history_cell::new_info_event(format!("PermissionProfile: {status}")),
+    )));
+}
+
+pub(super) fn emit_ctool_scope_status(app_event_tx: &AppEventSender) {
+    let scope = CToolScope::Workspace;
+    app_event_tx.send(AppEvent::InsertHistoryCell(Box::new(
+        history_cell::new_info_event(format!("CToolScope: {scope}")),
+    )));
+}
+
+fn permission_profile_status_name(config: &Config) -> String {
+    let Some(active_permission_profile) = config.permissions.active_permission_profile() else {
+        return "Custom".to_string();
+    };
+
+    match active_permission_profile.id.as_str() {
+        ":read-only" => "ReadOnly".to_string(),
+        ":workspace" => "Workspace".to_string(),
+        ":danger-full-access" => "DangerFullAccess".to_string(),
+        ":cool-read-write" => "CoolReadWrite".to_string(),
+        other => other.trim_start_matches(':').to_string(),
+    }
 }
 
 pub(super) fn emit_skill_load_warnings(app_event_tx: &AppEventSender, errors: &[SkillErrorInfo]) {
