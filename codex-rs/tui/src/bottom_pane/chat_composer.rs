@@ -2680,7 +2680,7 @@ impl ChatComposer {
                 r#"Unrecognized command '/{name}'. Type "/" for a list of supported commands."#
             );
             self.app_event_tx.send(AppEvent::InsertHistoryCell(Box::new(
-                history_cell::new_info_event(message, /*hint*/ None),
+                history_cell::new_info_event_with_hint(message, /*hint*/ None),
             )));
             self.set_text_content_with_mention_bindings(
                 original_input.clone(),

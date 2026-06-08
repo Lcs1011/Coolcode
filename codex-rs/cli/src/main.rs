@@ -919,7 +919,7 @@ async fn cli_main(arg0_paths: Arg0DispatchPaths) -> anyhow::Result<()> {
     let root_remote = remote.remote;
     let root_remote_auth_token_env = remote.remote_auth_token_env;
     let root_strict_config = interactive.strict_config;
-    let root_safe_mode = interactive.safe_mode;
+    let root_safe_mode = interactive.safe_mode.is_on();
 
     reject_root_safe_mode_usage(
         root_safe_mode,
@@ -936,7 +936,7 @@ async fn cli_main(arg0_paths: Arg0DispatchPaths) -> anyhow::Result<()> {
 
     match subcommand {
         None => {
-            let safe_mode = interactive.safe_mode;
+            let safe_mode = interactive.safe_mode.is_on();
             prepend_config_flags(
                 &mut interactive.config_overrides,
                 root_config_overrides.clone(),
@@ -1197,7 +1197,7 @@ async fn cli_main(arg0_paths: Arg0DispatchPaths) -> anyhow::Result<()> {
                 include_non_interactive,
                 config_overrides,
             );
-            let safe_mode = interactive.safe_mode;
+            let safe_mode = interactive.safe_mode.is_on();
             let exit_info = run_interactive_tui(
                 interactive,
                 remote.remote.or(root_remote.clone()),
@@ -1250,7 +1250,7 @@ async fn cli_main(arg0_paths: Arg0DispatchPaths) -> anyhow::Result<()> {
                 all,
                 config_overrides,
             );
-            let safe_mode = interactive.safe_mode;
+            let safe_mode = interactive.safe_mode.is_on();
             let exit_info = run_interactive_tui(
                 interactive,
                 remote.remote.or(root_remote.clone()),

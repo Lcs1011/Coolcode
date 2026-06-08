@@ -84,6 +84,10 @@ impl HistoryCell for UpdateAvailableHistoryCell {
 pub(crate) fn new_warning_event(message: String) -> PrefixedWrappedHistoryCell {
     PrefixedWrappedHistoryCell::new(message.yellow(), "⚠ ".yellow(), "  ")
 }
+#[allow(clippy::disallowed_methods)]
+pub(crate) fn new_info_event(message: String) -> PrefixedWrappedHistoryCell {
+    PrefixedWrappedHistoryCell::new(message.cyan(), "ⓘ ".cyan(), "  ")
+}
 
 const TRUSTED_ACCESS_FOR_CYBER_URL: &str = "https://chatgpt.com/cyber";
 
@@ -184,7 +188,7 @@ impl HistoryCell for DeprecationNoticeCell {
         lines
     }
 }
-pub(crate) fn new_info_event(message: String, hint: Option<String>) -> PlainHistoryCell {
+pub(crate) fn new_info_event_with_hint(message: String, hint: Option<String>) -> PlainHistoryCell {
     let mut line = vec!["• ".dim(), message.into()];
     if let Some(hint) = hint {
         line.push(" ".into());

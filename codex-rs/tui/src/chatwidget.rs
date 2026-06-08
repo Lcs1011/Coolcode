@@ -1505,7 +1505,7 @@ impl ChatWidget {
     }
 
     pub(crate) fn add_info_message(&mut self, message: String, hint: Option<String>) {
-        self.add_to_history(history_cell::new_info_event(message, hint));
+        self.add_to_history(history_cell::new_info_event_with_hint(message, hint));
         self.request_redraw();
     }
 

@@ -44,6 +44,13 @@ impl SkillLoadWarningState {
     }
 }
 
+pub(super) fn emit_safe_mode_status(app_event_tx: &AppEventSender, config: &Config) {
+    let status = if config.safe_mode { "ON" } else { "OFF" };
+    app_event_tx.send(AppEvent::InsertHistoryCell(Box::new(
+        history_cell::new_info_event(format!("SafeMode: {status}")),
+    )));
+}
+
 pub(super) fn emit_skill_load_warnings(app_event_tx: &AppEventSender, errors: &[SkillErrorInfo]) {
     if errors.is_empty() {
         return;
