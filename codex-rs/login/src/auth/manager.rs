@@ -46,6 +46,7 @@ use codex_protocol::account::PlanType as AccountPlanType;
 use codex_protocol::auth::PlanType as InternalPlanType;
 use codex_protocol::auth::RefreshTokenFailedError;
 use codex_protocol::auth::RefreshTokenFailedReason;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use serde_json::Value;
 use thiserror::Error;
 
@@ -910,7 +911,7 @@ async fn request_chatgpt_token_refresh(
         .post(endpoint.as_str())
         .header("Content-Type", "application/json")
         .json(&refresh_request)
-        .send()
+        .send_with_purpose(NetworkPurpose::ChatGPTAuth)
         .await
         .map_err(|err| RefreshTokenError::Transient(std::io::Error::other(err)))?;
 

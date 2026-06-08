@@ -1,5 +1,7 @@
 use codex_core::config::Config;
 use codex_model_provider_info::LMSTUDIO_OSS_PROVIDER_ID;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use std::io;
 use std::path::Path;
 
@@ -45,7 +47,7 @@ impl LMStudioClient {
 
     async fn check_server(&self) -> io::Result<()> {
         let url = format!("{}/models", self.base_url.trim_end_matches('/'));
-        let response = self.client.get(&url).send().await;
+        let response = safe_network::send(NetworkPurpose::Other, self.client.get(&url)).await;
 
         if let Ok(resp) = response {
             if resp.status().is_success() {
@@ -71,14 +73,15 @@ impl LMStudioClient {
             "max_output_tokens": 1
         });
 
-        let response = self
-            .client
-            .post(&url)
-            .header("Content-Type", "application/json")
-            .json(&request_body)
-            .send()
-            .await
-            .map_err(|e| io::Error::other(format!("Request failed: {e}")))?;
+        let response = safe_network::send(
+            NetworkPurpose::Other,
+            self.client
+                .post(&url)
+                .header("Content-Type", "application/json")
+                .json(&request_body),
+        )
+        .await
+        .map_err(|e| io::Error::other(format!("Request failed: {e}")))?;
 
         if response.status().is_success() {
             tracing::info!("Successfully loaded model '{model}'");
@@ -94,10 +97,7 @@ impl LMStudioClient {
     // Return the list of models available on the LM Studio server.
     pub async fn fetch_models(&self) -> io::Result<Vec<String>> {
         let url = format!("{}/models", self.base_url.trim_end_matches('/'));
-        let response = self
-            .client
-            .get(&url)
-            .send()
+        let response = safe_network::send(NetworkPurpose::Other, self.client.get(&url))
             .await
             .map_err(|e| io::Error::other(format!("Request failed: {e}")))?;
 
@@ -166,6 +166,9 @@ impl LMStudioClient {
     }
 
     pub async fn download_model(&self, model: &str) -> std::io::Result<()> {
+        safe_network::ensure_allowed(NetworkPurpose::Other)
+            .map_err(|err| io::Error::new(io::ErrorKind::PermissionDenied, err.to_string()))?;
+
         let lms = Self::find_lms()?;
         eprintln!("Downloading model: {model}");
 

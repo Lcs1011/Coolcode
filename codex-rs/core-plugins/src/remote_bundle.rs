@@ -10,6 +10,8 @@ use codex_plugin::PluginId;
 use codex_plugin::PluginIdError;
 use codex_utils_absolute_path::AbsolutePathBuf;
 use codex_utils_plugins::find_plugin_manifest_path;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use reqwest::Response;
 use reqwest::StatusCode;
 use serde_json::Value as JsonValue;
@@ -85,7 +87,7 @@ pub enum RemotePluginBundleInstallError {
     DownloadRequest {
         url: String,
         #[source]
-        source: reqwest::Error,
+        source: anyhow::Error,
     },
 
     #[error("remote plugin bundle download from {url} failed with status {status}: {body}")]
@@ -280,15 +282,17 @@ async fn download_remote_plugin_bundle_with_limit(
     max_bytes: u64,
 ) -> Result<Vec<u8>, RemotePluginBundleInstallError> {
     let client = build_reqwest_client();
-    let response = client
-        .get(bundle_download_url)
-        .timeout(REMOTE_PLUGIN_BUNDLE_DOWNLOAD_TIMEOUT)
-        .send()
-        .await
-        .map_err(|source| RemotePluginBundleInstallError::DownloadRequest {
-            url: bundle_download_url.to_string(),
-            source,
-        })?;
+    let response = safe_network::send(
+        NetworkPurpose::Other,
+        client
+            .get(bundle_download_url)
+            .timeout(REMOTE_PLUGIN_BUNDLE_DOWNLOAD_TIMEOUT),
+    )
+    .await
+    .map_err(|source| RemotePluginBundleInstallError::DownloadRequest {
+        url: bundle_download_url.to_string(),
+        source,
+    })?;
 
     let final_url = response.url().clone();
     // reqwest may already have followed redirects here. For backend-issued bundle URLs, keep the

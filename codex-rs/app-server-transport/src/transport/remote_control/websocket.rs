@@ -34,6 +34,8 @@ use codex_login::AuthManager;
 use codex_login::UnauthorizedRecovery;
 use codex_state::StateRuntime;
 use codex_utils_rustls_provider::ensure_rustls_crypto_provider;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use futures::SinkExt;
 use futures::StreamExt;
 use futures::stream::SplitSink;
@@ -1229,6 +1231,13 @@ pub(super) async fn connect_remote_control_websocket(
         connect_options.installation_id,
         connect_options.subscribe_cursor,
     )?;
+
+    safe_network::ensure_allowed(NetworkPurpose::Other).map_err(|err| {
+        io::Error::new(
+            ErrorKind::PermissionDenied,
+            format!("remote control websocket blocked by SafeMode: {err}"),
+        )
+    })?;
 
     let websocket_connect_result = tokio::time::timeout(
         REMOTE_CONTROL_WEBSOCKET_CONNECT_TIMEOUT,

@@ -25,6 +25,7 @@ reqwest = { workspace = true, features = ["json"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
+codex-utils-safety = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true }

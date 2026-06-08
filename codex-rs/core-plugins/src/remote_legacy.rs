@@ -2,6 +2,8 @@ use crate::remote::RemotePluginServiceConfig;
 use codex_login::CodexAuth;
 use codex_login::default_client::build_reqwest_client;
 use codex_protocol::protocol::Product;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use serde::Deserialize;
 use std::time::Duration;
 use url::Url;
@@ -39,7 +41,7 @@ pub enum RemotePluginMutationError {
     Request {
         url: String,
         #[source]
-        source: reqwest::Error,
+        source: anyhow::Error,
     },
 
     #[error("remote plugin mutation failed with status {status} from {url}: {body}")]
@@ -77,7 +79,7 @@ pub enum RemotePluginFetchError {
     Request {
         url: String,
         #[source]
-        source: reqwest::Error,
+        source: anyhow::Error,
     },
 
     #[error("remote featured plugin request to {url} failed with status {status}: {body}")]
@@ -116,8 +118,7 @@ pub async fn fetch_remote_featured_plugin_ids(
             request.headers(codex_model_provider::auth_provider_from_auth(auth).to_auth_headers());
     }
 
-    let response = request
-        .send()
+    let response = safe_network::send(NetworkPurpose::Other, request)
         .await
         .map_err(|source| RemotePluginFetchError::Request {
             url: url.clone(),
@@ -179,8 +180,7 @@ async fn post_remote_plugin_mutation(
         .timeout(REMOTE_PLUGIN_MUTATION_TIMEOUT)
         .headers(codex_model_provider::auth_provider_from_auth(auth).to_auth_headers());
 
-    let response = request
-        .send()
+    let response = safe_network::send(NetworkPurpose::Other, request)
         .await
         .map_err(|source| RemotePluginMutationError::Request {
             url: url.clone(),

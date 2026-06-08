@@ -10,6 +10,7 @@ use anyhow::Context;
 use anyhow::Result;
 use clap::Parser;
 use codex_utils_absolute_path::AbsolutePathBuf;
+use codex_utils_safety::safe_network;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::net::TcpListener as StdTcpListener;
@@ -695,6 +696,7 @@ impl NetworkProxy {
     }
 
     pub async fn run(&self) -> Result<NetworkProxyHandle> {
+        safe_network::ensure_allowed(safe_network::NetworkPurpose::Other)?;
         let current_cfg = self.state.current_cfg().await?;
         if !current_cfg.network.enabled {
             warn!("network.enabled is false; skipping proxy listeners");

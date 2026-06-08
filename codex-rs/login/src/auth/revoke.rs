@@ -11,6 +11,8 @@ use std::time::Duration;
 use codex_app_server_protocol::AuthMode as ApiAuthMode;
 use codex_client::CodexHttpClient;
 
+use codex_utils_safety::safe_network::NetworkPurpose;
+
 use super::manager::CLIENT_ID;
 use super::manager::REFRESH_TOKEN_URL_OVERRIDE_ENV_VAR;
 use super::manager::REVOKE_TOKEN_URL;
@@ -128,7 +130,7 @@ async fn revoke_oauth_token(
         .header("Content-Type", "application/json")
         .timeout(timeout)
         .json(&request)
-        .send()
+        .send_with_purpose(NetworkPurpose::ChatGPTAuth)
         .await
         .map_err(std::io::Error::other)?;
 

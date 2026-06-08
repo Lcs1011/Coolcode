@@ -1,3 +1,5 @@
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use serde::Serialize;
@@ -69,13 +71,15 @@ async fn request_user_code(
         client_id: client_id.to_string(),
     })
     .map_err(std::io::Error::other)?;
-    let resp = client
-        .post(url)
-        .header("Content-Type", "application/json")
-        .body(body)
-        .send()
-        .await
-        .map_err(std::io::Error::other)?;
+    let resp = safe_network::send(
+        NetworkPurpose::ChatGPTAuth,
+        client
+            .post(url)
+            .header("Content-Type", "application/json")
+            .body(body),
+    )
+    .await
+    .map_err(std::io::Error::other)?;
 
     if !resp.status().is_success() {
         let status = resp.status();
@@ -113,13 +117,15 @@ async fn poll_for_token(
             user_code: user_code.to_string(),
         })
         .map_err(std::io::Error::other)?;
-        let resp = client
-            .post(&url)
-            .header("Content-Type", "application/json")
-            .body(body)
-            .send()
-            .await
-            .map_err(std::io::Error::other)?;
+        let resp = safe_network::send(
+            NetworkPurpose::ChatGPTAuth,
+            client
+                .post(&url)
+                .header("Content-Type", "application/json")
+                .body(body),
+        )
+        .await
+        .map_err(std::io::Error::other)?;
 
         let status = resp.status();
 

@@ -1,6 +1,8 @@
 use codex_core::config::Config;
 use codex_login::AuthManager;
 use codex_login::default_client::create_client;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 
 use anyhow::Context;
 use serde::de::DeserializeOwned;
@@ -56,7 +58,9 @@ pub(crate) async fn chatgpt_get_request_with_timeout<T: DeserializeOwned>(
         request = request.timeout(timeout);
     }
 
-    let response = request.send().await.context("Failed to send request")?;
+    let response = safe_network::send(NetworkPurpose::ChatGPTAuth, request)
+        .await
+        .context("Failed to send request")?;
 
     if response.status().is_success() {
         let result: T = response

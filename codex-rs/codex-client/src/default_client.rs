@@ -1,3 +1,4 @@
+use codex_utils_safety::safe_network::NetworkPurpose;
 use http::Error as HttpError;
 use http::HeaderMap;
 use http::HeaderName;
@@ -111,6 +112,42 @@ impl CodexRequestBuilder {
     }
 
     pub async fn send(self) -> Result<Response, reqwest::Error> {
+        self.send_with_purpose_inner().await
+    }
+
+    pub async fn send_with_purpose(self, purpose: NetworkPurpose) -> anyhow::Result<Response> {
+        let headers = trace_headers();
+        let method = self.method.clone();
+        let url = self.url.clone();
+        let builder = self.builder.headers(headers);
+
+        match safe_network::send(purpose, builder).await {
+            Ok(response) => {
+                tracing::debug!(
+                    method = %method,
+                    url = %url,
+                    status = %response.status(),
+                    headers = ?response.headers(),
+                    version = ?response.version(),
+                    "Request completed"
+                );
+
+                Ok(response)
+            }
+            Err(error) => {
+                tracing::debug!(
+                    method = %method,
+                    url = %url,
+                    error = %error,
+                    "Request failed"
+                );
+
+                Err(error)
+            }
+        }
+    }
+
+    async fn send_with_purpose_inner(self) -> Result<Response, reqwest::Error> {
         let headers = trace_headers();
 
         match self.builder.headers(headers).send().await {

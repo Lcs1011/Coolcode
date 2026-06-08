@@ -14,6 +14,8 @@ use codex_app_server_protocol::RemoteControlClientsRevokeParams;
 use codex_app_server_protocol::RemoteControlClientsRevokeResponse;
 use codex_login::AuthManager;
 use codex_login::default_client::build_reqwest_client;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use serde::Deserialize;
 use std::io;
 use std::io::ErrorKind;
@@ -213,11 +215,12 @@ async fn send_client_management_request_once(
         }
         ClientManagementRequest::Revoke { url } => client.delete((*url).clone()),
     };
-    let response = request
+    let request_builder = request
         .timeout(REMOTE_CONTROL_CLIENT_MANAGEMENT_TIMEOUT)
         .headers(auth_headers)
-        .header(REMOTE_CONTROL_ACCOUNT_ID_HEADER, &auth.account_id)
-        .send()
+        .header(REMOTE_CONTROL_ACCOUNT_ID_HEADER, &auth.account_id);
+
+    let response = safe_network::send(NetworkPurpose::Other, request_builder)
         .await
         .map_err(|err| io::Error::other(format!("failed to {action}: {err}")))?;
     let headers = response.headers().clone();

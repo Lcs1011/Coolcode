@@ -28,6 +28,8 @@ use tiny_http::Response;
 use tiny_http::Server;
 use tiny_http::StatusCode;
 
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 mod dump;
 mod read_api_key;
 use dump::ExchangeDumper;
@@ -220,6 +222,7 @@ fn forward_request(
 
     headers.insert(HOST, config.host_header.clone());
 
+    safe_network::ensure_allowed(NetworkPurpose::Other)?;
     let upstream_resp = client
         .post(config.upstream_url.clone())
         .headers(headers)

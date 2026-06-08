@@ -18,6 +18,8 @@ use codex_model_provider_info::OLLAMA_OSS_PROVIDER_ID;
 use codex_model_provider_info::WireApi;
 #[cfg(test)]
 use codex_model_provider_info::create_oss_provider_with_base_url;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 
 const OLLAMA_CONNECTION_ERROR: &str = "No running Ollama server detected. Start it with: `ollama serve` (after installing). Install instructions: https://github.com/ollama/ollama?tab=readme-ov-file#ollama";
 
@@ -84,10 +86,12 @@ impl OllamaClient {
         } else {
             format!("{}/api/tags", self.host_root.trim_end_matches('/'))
         };
-        let resp = self.client.get(url).send().await.map_err(|err| {
-            tracing::warn!("Failed to connect to Ollama server: {err:?}");
-            io::Error::other(OLLAMA_CONNECTION_ERROR)
-        })?;
+        let resp = safe_network::send(NetworkPurpose::ModelApi, self.client.get(url))
+            .await
+            .map_err(|err| {
+                tracing::warn!("Failed to connect to Ollama server: {err:?}");
+                io::Error::other(OLLAMA_CONNECTION_ERROR)
+            })?;
         if resp.status().is_success() {
             Ok(())
         } else {
@@ -103,10 +107,7 @@ impl OllamaClient {
     /// Return the list of model names known to the local Ollama instance.
     pub async fn fetch_models(&self) -> io::Result<Vec<String>> {
         let tags_url = format!("{}/api/tags", self.host_root.trim_end_matches('/'));
-        let resp = self
-            .client
-            .get(tags_url)
-            .send()
+        let resp = safe_network::send(NetworkPurpose::ModelApi, self.client.get(tags_url))
             .await
             .map_err(io::Error::other)?;
         if !resp.status().is_success() {
@@ -129,10 +130,7 @@ impl OllamaClient {
     /// Query the server for its version string, returning `None` when unavailable.
     pub async fn fetch_version(&self) -> io::Result<Option<Version>> {
         let version_url = format!("{}/api/version", self.host_root.trim_end_matches('/'));
-        let resp = self
-            .client
-            .get(version_url)
-            .send()
+        let resp = safe_network::send(NetworkPurpose::ModelApi, self.client.get(version_url))
             .await
             .map_err(io::Error::other)?;
         if !resp.status().is_success() {
@@ -159,11 +157,12 @@ impl OllamaClient {
         model: &str,
     ) -> io::Result<BoxStream<'static, PullEvent>> {
         let url = format!("{}/api/pull", self.host_root.trim_end_matches('/'));
-        let resp = self
+        let builder = self
             .client
             .post(url)
             .json(&serde_json::json!({"model": model, "stream": true}))
-            .send()
+            .header("Content-Type", "application/json");
+        let resp = safe_network::send(NetworkPurpose::ModelApi, builder)
             .await
             .map_err(io::Error::other)?;
         if !resp.status().is_success() {

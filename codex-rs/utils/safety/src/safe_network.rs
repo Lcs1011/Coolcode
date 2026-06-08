@@ -13,12 +13,26 @@ impl NetworkPurpose {
     }
 }
 
+pub fn ensure_allowed(purpose: NetworkPurpose) -> anyhow::Result<()> {
+    if safe_mode::enabled() && !purpose.allowed_in_safe_mode() {
+        anyhow::bail!("network request blocked by SafeMode: {purpose:?}");
+    }
+
+    Ok(())
+}
+
 pub async fn send(
     purpose: NetworkPurpose,
     request: reqwest::RequestBuilder,
 ) -> anyhow::Result<reqwest::Response> {
-    if safe_mode::enabled() && !purpose.allowed_in_safe_mode() {
-        anyhow::bail!("network request blocked by SafeMode: {purpose:?}");
-    }
+    ensure_allowed(purpose)?;
     Ok(request.send().await?)
+}
+
+pub fn blocking_send(
+    purpose: NetworkPurpose,
+    request: reqwest::blocking::RequestBuilder,
+) -> anyhow::Result<reqwest::blocking::Response> {
+    ensure_allowed(purpose)?;
+    Ok(request.send()?)
 }

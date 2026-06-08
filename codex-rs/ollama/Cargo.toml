@@ -17,6 +17,7 @@ async-stream = { workspace = true }
 bytes = { workspace = true }
 codex-core = { workspace = true }
 codex-model-provider-info = { workspace = true }
+codex-utils-safety = { workspace = true }
 futures = { workspace = true }
 memchr = { workspace = true }
 reqwest = { workspace = true, features = ["json", "stream"] }

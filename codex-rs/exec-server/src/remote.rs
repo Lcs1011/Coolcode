@@ -8,6 +8,8 @@ use tokio_tungstenite::connect_async;
 use tracing::warn;
 
 use codex_utils_rustls_provider::ensure_rustls_crypto_provider;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 
 use crate::ExecServerError;
 use crate::ExecServerRuntimePaths;
@@ -48,15 +50,17 @@ impl EnvironmentRegistryClient {
         &self,
         environment_id: &str,
     ) -> Result<EnvironmentRegistryRegistrationResponse, ExecServerError> {
-        let response = self
+        let request = self
             .http
             .post(endpoint_url(
                 &self.base_url,
                 &format!("/cloud/environment/{environment_id}/register"),
             ))
-            .headers(self.auth_provider.to_auth_headers())
-            .send()
-            .await?;
+            .headers(self.auth_provider.to_auth_headers());
+
+        let response = safe_network::send(NetworkPurpose::Other, request)
+            .await
+            .map_err(|err| ExecServerError::Protocol(err.to_string()))?;
         self.parse_json_response(response).await
     }
 
@@ -141,6 +145,9 @@ pub async fn run_remote_environment(
             "codex exec-server remote environment registered with environment_id {}",
             response.environment_id
         );
+
+        safe_network::ensure_allowed(NetworkPurpose::Other)
+            .map_err(|err| ExecServerError::Protocol(err.to_string()))?;
 
         match connect_async(response.url.as_str()).await {
             Ok((websocket, _)) => {

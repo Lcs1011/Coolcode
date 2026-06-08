@@ -21,6 +21,9 @@ use tokio::net::TcpListener;
 use tracing::info;
 use tracing::warn;
 
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
+
 use crate::ExecServerRuntimePaths;
 use crate::connection::JsonRpcConnection;
 use crate::server::processor::ConnectionProcessor;
@@ -120,6 +123,7 @@ async fn run_websocket_listener(
     bind_address: SocketAddr,
     runtime_paths: ExecServerRuntimePaths,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    safe_network::ensure_allowed(NetworkPurpose::Other);
     let listener = TcpListener::bind(bind_address).await?;
     let local_addr = listener.local_addr()?;
     let processor = ConnectionProcessor::new(runtime_paths);

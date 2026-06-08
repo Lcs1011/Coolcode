@@ -6,6 +6,7 @@ use codex_config::CloudConfigBundleLoadErrorCode;
 use codex_config::CloudConfigBundleLoader;
 use codex_config::types::AuthCredentialsStoreMode;
 use codex_login::AuthManager;
+use codex_utils_safety::safe_mode;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -22,6 +23,10 @@ pub fn cloud_config_bundle_loader(
     chatgpt_base_url: String,
     codex_home: PathBuf,
 ) -> CloudConfigBundleLoader {
+    if safe_mode::enabled() {
+        return CloudConfigBundleLoader::default();
+    }
+
     let service = CloudConfigBundleService::new(
         auth_manager,
         Arc::new(BackendBundleClient::new(chatgpt_base_url)),

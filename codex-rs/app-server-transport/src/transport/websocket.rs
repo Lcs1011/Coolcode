@@ -26,6 +26,8 @@ use axum::response::IntoResponse;
 use axum::response::Response;
 use axum::routing::any;
 use axum::routing::get;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use futures::SinkExt;
 use futures::StreamExt;
 use owo_colors::OwoColorize;
@@ -140,6 +142,8 @@ pub async fn start_websocket_acceptor(
             ),
         ));
     }
+    safe_network::ensure_allowed(NetworkPurpose::Other)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
     let listener = TcpListener::bind(bind_address).await?;
     let local_addr = listener.local_addr()?;
     print_websocket_startup_banner(local_addr);

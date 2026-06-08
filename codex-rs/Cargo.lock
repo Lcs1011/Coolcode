@@ -1821,6 +1821,7 @@ dependencies = [
  "base64 0.22.1",
  "chrono",
  "codex-protocol",
+ "codex-utils-safety",
  "crypto_box",
  "ed25519-dalek",
  "jsonwebtoken",
@@ -2000,6 +2001,7 @@ dependencies = [
  "codex-uds",
  "codex-utils-absolute-path",
  "codex-utils-rustls-provider",
+ "codex-utils-safety",
  "futures",
  "pretty_assertions",
  "serde",
@@ -2021,6 +2023,7 @@ dependencies = [
  "codex-app-server-transport",
  "codex-uds",
  "codex-utils-home-dir",
+ "codex-utils-safety",
  "futures",
  "libc",
  "pretty_assertions",
@@ -2100,6 +2103,7 @@ dependencies = [
  "codex-uds",
  "codex-utils-absolute-path",
  "codex-utils-rustls-provider",
+ "codex-utils-safety",
  "constant_time_eq 0.3.1",
  "futures",
  "gethostname",
@@ -2234,6 +2238,7 @@ dependencies = [
  "codex-plugin",
  "codex-utils-cargo-bin",
  "codex-utils-cli",
+ "codex-utils-safety",
  "pretty_assertions",
  "serde",
  "serde_json",
@@ -2288,6 +2293,7 @@ dependencies = [
  "codex-utils-cargo-bin",
  "codex-utils-cli",
  "codex-utils-path",
+ "codex-utils-safety",
  "codex-windows-sandbox",
  "crossterm",
  "http 1.4.0",
@@ -2319,10 +2325,12 @@ dependencies = [
 name = "codex-client"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "bytes",
  "codex-utils-cargo-bin",
  "codex-utils-rustls-provider",
+ "codex-utils-safety",
  "eventsource-stream",
  "futures",
  "http 1.4.0",
@@ -2358,6 +2366,7 @@ dependencies = [
  "codex-login",
  "codex-otel",
  "codex-protocol",
+ "codex-utils-safety",
  "hmac 0.12.1",
  "pretty_assertions",
  "serde",
@@ -2678,6 +2687,7 @@ dependencies = [
  "codex-protocol",
  "codex-utils-absolute-path",
  "codex-utils-plugins",
+ "codex-utils-safety",
  "dirs",
  "flate2",
  "indexmap 2.13.0",
@@ -2797,6 +2807,7 @@ dependencies = [
  "codex-utils-absolute-path",
  "codex-utils-pty",
  "codex-utils-rustls-provider",
+ "codex-utils-safety",
  "ctor 0.6.3",
  "futures",
  "http 1.4.0",
@@ -3111,6 +3122,7 @@ version = "0.0.0"
 dependencies = [
  "codex-core",
  "codex-model-provider-info",
+ "codex-utils-safety",
  "reqwest 0.12.28",
  "serde_json",
  "tokio",
@@ -3136,6 +3148,7 @@ dependencies = [
  "codex-otel",
  "codex-protocol",
  "codex-terminal-detection",
+ "codex-utils-safety",
  "codex-utils-template",
  "core_test_support",
  "jsonwebtoken",
@@ -3380,6 +3393,7 @@ dependencies = [
  "codex-utils-absolute-path",
  "codex-utils-home-dir",
  "codex-utils-rustls-provider",
+ "codex-utils-safety",
  "globset",
  "pretty_assertions",
  "rama-core",
@@ -3411,6 +3425,7 @@ dependencies = [
  "bytes",
  "codex-core",
  "codex-model-provider-info",
+ "codex-utils-safety",
  "futures",
  "memchr",
  "pretty_assertions",
@@ -3553,6 +3568,7 @@ dependencies = [
  "anyhow",
  "clap",
  "codex-process-hardening",
+ "codex-utils-safety",
  "ctor 0.6.3",
  "libc",
  "pretty_assertions",
@@ -3580,6 +3596,7 @@ dependencies = [
  "codex-utils-cargo-bin",
  "codex-utils-home-dir",
  "codex-utils-pty",
+ "codex-utils-safety",
  "futures",
  "keyring",
  "memchr",
@@ -3910,6 +3927,7 @@ dependencies = [
  "codex-utils-oss",
  "codex-utils-path",
  "codex-utils-plugins",
+ "codex-utils-safety",
  "codex-utils-sandbox-summary",
  "codex-utils-sleep-inhibitor",
  "codex-utils-string",
@@ -4146,6 +4164,14 @@ name = "codex-utils-rustls-provider"
 version = "0.0.0"
 dependencies = [
  "rustls",
+]
+
+[[package]]
+name = "codex-utils-safety"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "reqwest 0.12.28",
 ]
 
 [[package]]

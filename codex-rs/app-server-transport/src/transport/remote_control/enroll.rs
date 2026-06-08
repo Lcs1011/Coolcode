@@ -14,6 +14,8 @@ use codex_app_server_protocol::RemoteControlPairingStatusResponse;
 use codex_login::default_client::build_reqwest_client;
 use codex_state::RemoteControlEnrollmentRecord;
 use codex_state::StateRuntime;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::io;
@@ -58,12 +60,13 @@ impl RemoteControlEnrollment {
             .as_deref()
             .ok_or_else(pairing_unavailable_error)?;
 
-        let response = build_reqwest_client()
+        let request_builder = build_reqwest_client()
             .post(&self.remote_control_target.pair_url)
             .timeout(REMOTE_CONTROL_PAIRING_TIMEOUT)
             .bearer_auth(remote_control_token)
-            .json(&request)
-            .send()
+            .json(&request);
+
+        let response = safe_network::send(NetworkPurpose::Other, request_builder)
             .await
             .map_err(|err| {
                 io::Error::other(format!(
@@ -151,12 +154,13 @@ impl RemoteControlEnrollment {
             .as_deref()
             .ok_or_else(pairing_unavailable_error)?;
 
-        let response = build_reqwest_client()
+        let request_builder = build_reqwest_client()
             .post(&self.remote_control_target.pair_status_url)
             .timeout(REMOTE_CONTROL_PAIRING_TIMEOUT)
             .bearer_auth(remote_control_token)
-            .json(&request)
-            .send()
+            .json(&request);
+
+        let response = safe_network::send(NetworkPurpose::Other, request_builder)
             .await
             .map_err(|err| {
                 io::Error::other(format!(
@@ -492,14 +496,15 @@ where
     let client = build_reqwest_client();
     let mut auth_headers = HeaderMap::new();
     auth.auth_provider.add_auth_headers(&mut auth_headers);
-    let response = client
+    let request_builder = client
         .post(url)
         .timeout(REMOTE_CONTROL_ENROLL_TIMEOUT)
         .headers(auth_headers)
         .header(REMOTE_CONTROL_ACCOUNT_ID_HEADER, &auth.account_id)
         .header(REMOTE_CONTROL_INSTALLATION_ID_HEADER, installation_id)
-        .json(request)
-        .send()
+        .json(request);
+
+    let response = safe_network::send(NetworkPurpose::Other, request_builder)
         .await
         .map_err(|err| {
             io::Error::other(format!(

@@ -37,6 +37,8 @@ use codex_app_server_protocol::RemoteControlPairingStatusResponse;
 use codex_app_server_protocol::RemoteControlStatusChangedNotification;
 use codex_login::AuthManager;
 use codex_state::StateRuntime;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use futures::FutureExt;
 use gethostname::gethostname;
 use std::error::Error;
@@ -764,6 +766,7 @@ pub async fn start_remote_control(
     app_server_client_name_rx: Option<oneshot::Receiver<String>>,
     initial_enabled: bool,
 ) -> io::Result<(JoinHandle<()>, RemoteControlHandle)> {
+    safe_network::ensure_allowed(NetworkPurpose::Other)?;
     let state_db_available = state_db.is_some();
     let requested_initial_enabled = initial_enabled;
     let initial_enabled = initial_enabled && state_db_available;

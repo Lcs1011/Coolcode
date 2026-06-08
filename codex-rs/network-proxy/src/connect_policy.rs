@@ -1,5 +1,7 @@
 use crate::policy::is_non_public_ip;
 use crate::state::NetworkProxyState;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use rama_core::Service;
 use rama_core::error::BoxError;
 use rama_core::error::ErrorExt as _;
@@ -67,6 +69,12 @@ impl TcpStreamConnector for TargetCheckedStreamConnector {
     type Error = BoxError;
 
     async fn connect(&self, addr: SocketAddr) -> Result<TcpStream, Self::Error> {
+        safe_network::ensure_allowed(NetworkPurpose::Other).map_err(|err| {
+            let err: BoxError =
+                io::Error::new(io::ErrorKind::PermissionDenied, err.to_string()).into();
+            err
+        })?;
+
         if !self.policy.allow_local_binding().await? && is_non_public_ip(addr.ip()) {
             return Err(io::Error::new(
                 io::ErrorKind::PermissionDenied,

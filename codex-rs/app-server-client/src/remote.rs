@@ -40,6 +40,8 @@ use codex_app_server_protocol::ServerRequest;
 use codex_uds::UnixStream;
 use codex_utils_absolute_path::AbsolutePathBuf;
 use codex_utils_rustls_provider::ensure_rustls_crypto_provider;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use futures::SinkExt;
 use futures::StreamExt;
 use serde::de::DeserializeOwned;
@@ -717,6 +719,7 @@ async fn connect_websocket_endpoint(
 
     ensure_rustls_crypto_provider();
     let websocket_config = remote_websocket_config();
+    safe_network::ensure_allowed(NetworkPurpose::Other).map_err(IoError::other)?;
     let stream = timeout(
         CONNECT_TIMEOUT,
         connect_async_with_config(
@@ -754,6 +757,7 @@ async fn connect_unix_socket_endpoint(
                 format!("invalid UDS websocket handshake URL: {err}"),
             )
         })?;
+    safe_network::ensure_allowed(NetworkPurpose::Other).map_err(IoError::other)?;
     let stream = timeout(CONNECT_TIMEOUT, UnixStream::connect(socket_path.as_path()))
         .await
         .map_err(|_| {

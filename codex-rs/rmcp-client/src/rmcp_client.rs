@@ -15,6 +15,8 @@ use codex_api::SharedAuthProvider;
 use codex_client::maybe_build_rustls_client_config_with_custom_ca;
 use codex_config::types::McpServerEnvVar;
 use codex_exec_server::HttpClient;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use futures::FutureExt;
 use futures::future::BoxFuture;
 use oauth2::TokenResponse;
@@ -348,6 +350,8 @@ impl RmcpClient {
         http_client: Arc<dyn HttpClient>,
         auth_provider: Option<SharedAuthProvider>,
     ) -> Result<Self> {
+        safe_network::ensure_allowed(NetworkPurpose::Other)?;
+
         let transport_recipe = TransportRecipe::StreamableHttp {
             server_name: server_name.to_string(),
             url: url.to_string(),
@@ -730,6 +734,8 @@ impl RmcpClient {
                 http_client,
                 auth_provider,
             } => {
+                safe_network::ensure_allowed(NetworkPurpose::Other)?;
+
                 let default_headers =
                     build_default_headers(http_headers.clone(), env_http_headers.clone())?;
 

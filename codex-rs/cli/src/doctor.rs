@@ -60,6 +60,8 @@ use codex_terminal_detection::TerminalName;
 use codex_terminal_detection::terminal_info;
 use codex_tui::Cli as TuiCli;
 use codex_utils_cli::CliConfigOverrides;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use http::HeaderMap;
 use http::HeaderValue;
 use serde::Serialize;
@@ -2818,10 +2820,8 @@ async fn mcp_http_probe_url_with_timeout(url: &str, timeout: Duration) -> Result
 }
 
 async fn http_probe_url_with_timeout(url: &str, timeout: Duration) -> Result<String, String> {
-    let response = build_reqwest_client()
-        .head(url)
-        .timeout(timeout)
-        .send()
+    let request = build_reqwest_client().head(url).timeout(timeout);
+    let response = safe_network::send(NetworkPurpose::Diagnostics, request)
         .await
         .map_err(|err| {
             if err.is_timeout() {
@@ -2844,10 +2844,8 @@ async fn http_get_probe_url_with_timeout(url: &str, timeout: Duration) -> Result
 }
 
 async fn http_get_probe_status_with_timeout(url: &str, timeout: Duration) -> Result<u16, String> {
-    let response = build_reqwest_client()
-        .get(url)
-        .timeout(timeout)
-        .send()
+    let request = build_reqwest_client().get(url).timeout(timeout);
+    let response = safe_network::send(NetworkPurpose::Diagnostics, request)
         .await
         .map_err(|err| {
             if err.is_timeout() {

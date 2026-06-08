@@ -30,6 +30,8 @@ use serde::de::DeserializeOwned;
 use sha2::Digest as _;
 use sha2::Sha512;
 
+use codex_utils_safety::safe_network;
+
 const AGENT_TASK_REGISTRATION_TIMEOUT: Duration = Duration::from_secs(30);
 const AGENT_IDENTITY_JWKS_TIMEOUT: Duration = Duration::from_secs(10);
 const AGENT_IDENTITY_JWT_AUDIENCE: &str = "codex-app-server";

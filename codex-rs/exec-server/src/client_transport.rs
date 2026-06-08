@@ -8,6 +8,8 @@ use tracing::debug;
 use tracing::warn;
 
 use codex_utils_rustls_provider::ensure_rustls_crypto_provider;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 
 use crate::ExecServerClient;
 use crate::ExecServerError;
@@ -57,6 +59,8 @@ impl ExecServerClient {
         args: RemoteExecServerConnectArgs,
     ) -> Result<Self, ExecServerError> {
         ensure_rustls_crypto_provider();
+        safe_network::ensure_allowed(NetworkPurpose::Other)
+            .map_err(|err| ExecServerError::Protocol(err.to_string()))?;
         let websocket_url = args.websocket_url.clone();
         let connect_timeout = args.connect_timeout;
         let (stream, _) = timeout(connect_timeout, connect_async(websocket_url.as_str()))

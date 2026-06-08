@@ -10,6 +10,8 @@ use codex_login::CodexAuth;
 use codex_login::default_client::build_reqwest_client;
 use codex_plugin::PluginId;
 use codex_utils_absolute_path::AbsolutePathBuf;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use reqwest::RequestBuilder;
 use serde::Deserialize;
 use serde::Serialize;
@@ -257,7 +259,7 @@ pub enum RemotePluginCatalogError {
     Request {
         url: String,
         #[source]
-        source: reqwest::Error,
+        source: anyhow::Error,
     },
 
     #[error("remote plugin catalog request to {url} failed with status {status}: {body}")]
@@ -1602,8 +1604,7 @@ async fn send_and_decode<T: for<'de> Deserialize<'de>>(
     request: RequestBuilder,
     url: &str,
 ) -> Result<T, RemotePluginCatalogError> {
-    let response = request
-        .send()
+    let response = safe_network::send(NetworkPurpose::Other, request)
         .await
         .map_err(|source| RemotePluginCatalogError::Request {
             url: url.to_string(),

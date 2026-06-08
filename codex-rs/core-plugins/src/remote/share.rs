@@ -4,6 +4,8 @@ use crate::plugin_bundle_archive::pack_plugin_bundle_tar_gz;
 use codex_login::CodexAuth;
 use codex_login::default_client::build_reqwest_client;
 use codex_utils_absolute_path::AbsolutePathBuf;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use reqwest::RequestBuilder;
 use reqwest::StatusCode;
 use serde::Deserialize;
@@ -419,8 +421,7 @@ async fn put_workspace_plugin_upload(
         .header("x-ms-blob-type", "BlockBlob")
         .header("Content-Type", "application/gzip")
         .body(archive_bytes);
-    let response = request
-        .send()
+    let response = safe_network::send(NetworkPurpose::Other, request)
         .await
         .map_err(|source| RemotePluginCatalogError::Request {
             url: "workspace plugin upload URL".to_string(),
@@ -493,8 +494,7 @@ async fn send_and_expect_status(
     url_for_error: &str,
     expected_statuses: &[StatusCode],
 ) -> Result<(), RemotePluginCatalogError> {
-    let response = request
-        .send()
+    let response = safe_network::send(NetworkPurpose::Other, request)
         .await
         .map_err(|source| RemotePluginCatalogError::Request {
             url: url_for_error.to_string(),

@@ -11,6 +11,10 @@ use anyhow::Result;
 #[cfg(not(unix))]
 use anyhow::bail;
 #[cfg(unix)]
+use codex_utils_safety::safe_network;
+#[cfg(unix)]
+use codex_utils_safety::safe_network::NetworkPurpose;
+#[cfg(unix)]
 use futures::FutureExt;
 #[cfg(unix)]
 use std::os::unix::process::CommandExt;
@@ -155,14 +159,17 @@ pub(crate) fn reexec_managed_updater(managed_codex_bin: &std::path::Path) -> Res
 
 #[cfg(unix)]
 async fn install_latest_standalone() -> Result<()> {
-    let script = reqwest::get("https://chatgpt.com/codex/install.sh")
-        .await
-        .context("failed to fetch standalone Codex updater")?
-        .error_for_status()
-        .context("standalone Codex updater request failed")?
-        .bytes()
-        .await
-        .context("failed to read standalone Codex updater")?;
+    let script = safe_network::send(
+        NetworkPurpose::Other,
+        reqwest::Client::new().get("https://chatgpt.com/codex/install.sh"),
+    )
+    .await
+    .context("failed to fetch standalone Codex updater")?
+    .error_for_status()
+    .context("standalone Codex updater request failed")?
+    .bytes()
+    .await
+    .context("failed to read standalone Codex updater")?;
 
     let mut child = Command::new("/bin/sh")
         .arg("-s")

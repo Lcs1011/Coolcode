@@ -28,6 +28,7 @@ codex-plugin = { workspace = true }
 codex-protocol = { workspace = true }
 codex-utils-absolute-path = { workspace = true }
 codex-utils-plugins = { workspace = true }
+codex-utils-safety = { workspace = true }
 chrono = { workspace = true }
 dirs = { workspace = true }
 flate2 = { workspace = true }

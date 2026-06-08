@@ -39,6 +39,8 @@ use chrono::Utc;
 use codex_app_server_protocol::AuthMode;
 use codex_client::build_reqwest_client_with_custom_ca;
 use codex_config::types::AuthCredentialsStoreMode;
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use codex_utils_template::Template;
 use rand::RngCore;
 use serde_json::Value as JsonValue;
@@ -138,6 +140,9 @@ impl ShutdownHandle {
 
 /// Starts a local callback server and returns the browser auth URL.
 pub fn run_login_server(opts: ServerOptions) -> io::Result<LoginServer> {
+    safe_network::ensure_allowed(NetworkPurpose::ChatGPTAuth)
+        .map_err(|err| io::Error::new(io::ErrorKind::PermissionDenied, err.to_string()))?;
+
     let pkce = generate_pkce();
     let state = opts.force_state.clone().unwrap_or_else(generate_state);
 
@@ -733,7 +738,7 @@ pub(crate) async fn exchange_code_for_tokens(
         redirect_uri = %redirect_uri,
         "starting oauth token exchange"
     );
-    let resp = client
+    let request = client
         .post(token_endpoint)
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(format!(
@@ -742,17 +747,16 @@ pub(crate) async fn exchange_code_for_tokens(
             urlencoding::encode(redirect_uri),
             urlencoding::encode(client_id),
             urlencoding::encode(&pkce.code_verifier)
-        ))
-        .send()
-        .await;
+        ));
+
+    let resp = safe_network::send(NetworkPurpose::ChatGPTAuth, request).await;
     let resp = match resp {
         Ok(resp) => resp,
         Err(error) => {
-            let error = redact_sensitive_error_url(error);
             error!(
-                is_timeout = error.is_timeout(),
-                is_connect = error.is_connect(),
-                is_request = error.is_request(),
+                is_timeout = false,
+                is_connect = false,
+                is_request = false,
                 error = %error,
                 "oauth token exchange transport failure"
             );
@@ -1145,7 +1149,7 @@ pub(crate) async fn obtain_api_key(
     }
     let client = build_reqwest_client_with_custom_ca(reqwest::Client::builder())?;
     let token_endpoint = format!("{}/oauth/token", issuer.trim_end_matches('/'));
-    let resp = client
+    let request = client
         .post(token_endpoint)
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(format!(
@@ -1155,8 +1159,9 @@ pub(crate) async fn obtain_api_key(
             urlencoding::encode("openai-api-key"),
             urlencoding::encode(id_token),
             urlencoding::encode("urn:ietf:params:oauth:token-type:id_token")
-        ))
-        .send()
+        ));
+
+    let resp = safe_network::send(NetworkPurpose::ChatGPTAuth, request)
         .await
         .map_err(io::Error::other)?;
     if !resp.status().is_success() {
