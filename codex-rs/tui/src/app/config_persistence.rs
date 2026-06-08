@@ -195,10 +195,7 @@ impl App {
                 /*personality*/ None,
             )));
         self.app_event_tx.send(AppEvent::InsertHistoryCell(Box::new(
-            history_cell::new_info_event(
-                format!("Permissions updated to {display_label}"),
-                /*hint*/ None,
-            ),
+            history_cell::new_info_event(format!("Permissions updated to {display_label}")),
         )));
         true
     }

@@ -493,10 +493,7 @@ impl ChatWidget {
                 "Could not request a limit increase. Please try again."
             }
         };
-        self.add_to_history(history_cell::new_info_event(
-            message.to_string(),
-            /*hint*/ None,
-        ));
+        self.add_to_history(history_cell::new_info_event(message.to_string()));
         self.request_redraw();
     }
 

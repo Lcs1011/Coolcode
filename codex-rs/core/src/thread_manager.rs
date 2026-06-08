@@ -271,10 +271,11 @@ impl ThreadManager {
             restriction_product,
         ));
         let mcp_manager = Arc::new(McpManager::new(Arc::clone(&plugins_manager)));
-        let skills_manager = Arc::new(SkillsManager::new_with_restriction_product(
+        let skills_manager = Arc::new(SkillsManager::new_with_restriction_product_and_safe_mode(
             codex_home,
             config.bundled_skills_enabled(),
             restriction_product,
+            config.safe_mode,
         ));
         Self {
             state: Arc::new(ThreadManagerState {

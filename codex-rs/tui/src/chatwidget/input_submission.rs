@@ -25,10 +25,7 @@ impl ChatWidget {
         let cmd = command.trim();
         if cmd.is_empty() {
             self.app_event_tx.send(AppEvent::InsertHistoryCell(Box::new(
-                history_cell::new_info_event(
-                    USER_SHELL_COMMAND_HELP_TITLE.to_string(),
-                    Some(USER_SHELL_COMMAND_HELP_HINT.to_string()),
-                ),
+                history_cell::new_info_event(USER_SHELL_COMMAND_HELP_TITLE.to_string()),
             )));
             QueueDrain::Continue
         } else {

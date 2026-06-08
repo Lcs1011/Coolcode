@@ -3412,7 +3412,10 @@ async fn build_hooks_for_config(
         (vec![], vec![])
     } else {
         let plugin_outcome = plugins_manager.plugins_for_config(&plugins_input).await;
-        (plugin_outcome.effective_plugin_hook_sources(), plugin_outcome.effective_plugin_hook_warnings())
+        (
+            plugin_outcome.effective_plugin_hook_sources(),
+            plugin_outcome.effective_plugin_hook_warnings(),
+        )
     };
     Hooks::new(HooksConfig {
         legacy_notify_argv: config.notify.clone(),

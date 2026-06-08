@@ -416,11 +416,7 @@ fn track_event_request_batches(events: Vec<TrackEventRequest>) -> Vec<Vec<TrackE
     batches
 }
 
-async fn send_track_events_request(
-    _auth: &CodexAuth,
-    _url: &str,
-    _events: Vec<TrackEventRequest>,
-) {
+async fn send_track_events_request(_auth: &CodexAuth, _url: &str, _events: Vec<TrackEventRequest>) {
     // Analytics disabled in secure build.
 }
 

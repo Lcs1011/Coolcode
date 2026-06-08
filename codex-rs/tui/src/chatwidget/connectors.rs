@@ -213,10 +213,7 @@ impl ChatWidget {
                 let missing_label_for_action = missing_label.clone();
                 item.actions = vec![Box::new(move |tx| {
                     tx.send(AppEvent::InsertHistoryCell(Box::new(
-                        history_cell::new_info_event(
-                            missing_label_for_action.clone(),
-                            /*hint*/ None,
-                        ),
+                        history_cell::new_info_event(missing_label_for_action.clone()),
                     )));
                 })];
                 item.dismiss_on_select = true;

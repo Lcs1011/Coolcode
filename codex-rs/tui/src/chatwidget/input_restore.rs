@@ -148,7 +148,6 @@ impl ChatWidget {
             if send_pending_steers_immediately {
                 self.add_to_history(history_cell::new_info_event(
                     "Model interrupted to submit steer instructions.".to_owned(),
-                    /*hint*/ None,
                 ));
             } else {
                 self.add_to_history(history_cell::new_error_event(

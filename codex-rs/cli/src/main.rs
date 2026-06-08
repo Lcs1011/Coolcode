@@ -31,6 +31,7 @@ use codex_state::memories_db_path;
 use codex_tui::AppExitInfo;
 use codex_tui::Cli as TuiCli;
 use codex_tui::ExitReason;
+use codex_tui::SafeModeCliArg;
 use codex_tui::UpdateAction;
 use codex_utils_absolute_path::AbsolutePathBuf;
 use codex_utils_cli::CliConfigOverrides;
@@ -2019,10 +2020,10 @@ fn subcommand_requests_safe_mode(subcommand: &Option<Subcommand>) -> bool {
     match subcommand {
         Some(Subcommand::Resume(ResumeCommand {
             config_overrides, ..
-        })) => config_overrides.safe_mode,
+        })) => matches!(config_overrides.safe_mode, SafeModeCliArg::On),
         Some(Subcommand::Fork(ForkCommand {
             config_overrides, ..
-        })) => config_overrides.safe_mode,
+        })) => matches!(config_overrides.safe_mode, SafeModeCliArg::On),
         _ => false,
     }
 }

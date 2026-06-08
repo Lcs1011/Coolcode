@@ -1077,10 +1077,9 @@ impl App {
                 #[cfg(target_os = "windows")]
                 {
                     self.chat_widget
-                        .add_to_history(history_cell::new_info_event(
-                            format!("Granting sandbox read access to {path} ..."),
-                            /*hint*/ None,
-                        ));
+                        .add_to_history(history_cell::new_info_event(format!(
+                            "Granting sandbox read access to {path} ..."
+                        )));
 
                     let permission_profile = self.config.permissions.effective_permission_profile();
                     let workspace_roots = self.config.effective_workspace_roots();
@@ -1124,10 +1123,10 @@ impl App {
                 }
                 None => {
                     self.chat_widget
-                        .add_to_history(history_cell::new_info_event(
-                            format!("Sandbox read access granted for {}", path.display()),
-                            /*hint*/ None,
-                        ));
+                        .add_to_history(history_cell::new_info_event(format!(
+                            "Sandbox read access granted for {}",
+                            path.display()
+                        )));
                 }
             },
             AppEvent::EnableWindowsSandboxForAgentMode {
