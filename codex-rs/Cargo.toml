@@ -116,7 +116,7 @@ members = [
     "uds",
     "codex-experimental-api-macros",
     "plugin",
-    "model-provider",
+    "model-provider", "utils/ctool",
 ]
 resolver = "2"
 
@@ -224,6 +224,7 @@ codex-uds = { path = "uds" }
 codex-utils-absolute-path = { path = "utils/absolute-path" }
 codex-utils-approval-presets = { path = "utils/approval-presets" }
 codex-utils-cache = { path = "utils/cache" }
+ctool = { path = "utils/ctool" }
 codex-utils-cargo-bin = { path = "utils/cargo-bin" }
 codex-utils-cli = { path = "utils/cli" }
 codex-utils-elapsed = { path = "utils/elapsed" }
