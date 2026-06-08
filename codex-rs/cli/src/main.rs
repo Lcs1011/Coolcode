@@ -72,6 +72,7 @@ use codex_core::config::ConfigOverrides;
 use codex_core::config::edit::ConfigEditsBuilder;
 use codex_core::config::find_codex_home;
 use codex_core::config::resolve_profile_v2_config_path;
+use codex_core::safe_mode;
 use codex_features::FEATURES;
 use codex_features::Stage;
 use codex_features::is_known_feature_key;
@@ -921,6 +922,7 @@ async fn cli_main(arg0_paths: Arg0DispatchPaths) -> anyhow::Result<()> {
     let root_remote_auth_token_env = remote.remote_auth_token_env;
     let root_strict_config = interactive.strict_config;
     let root_safe_mode = interactive.safe_mode.is_on();
+    safe_mode::init(root_safe_mode);
 
     reject_root_safe_mode_usage(
         root_safe_mode,
