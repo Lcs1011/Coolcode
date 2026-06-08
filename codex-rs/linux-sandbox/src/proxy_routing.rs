@@ -18,6 +18,9 @@ use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::DirBuilderExt;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::UnixListener;
+
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::path::PathBuf;
@@ -71,6 +74,7 @@ struct ProxyRoutePlan {
 }
 
 pub(crate) fn prepare_host_proxy_route_spec() -> io::Result<String> {
+    safe_network::ensure_allowed(NetworkPurpose::Other).map_err(io::Error::other)?;
     let env: HashMap<String, String> = std::env::vars().collect();
     let plan = plan_proxy_routes(&env);
 
@@ -122,6 +126,7 @@ pub(crate) fn prepare_host_proxy_route_spec() -> io::Result<String> {
 }
 
 pub(crate) fn activate_proxy_routes_in_netns(serialized_spec: &str) -> io::Result<()> {
+    safe_network::ensure_allowed(NetworkPurpose::Other).map_err(io::Error::other)?;
     let spec: ProxyRouteSpec = serde_json::from_str(serialized_spec).map_err(io::Error::other)?;
 
     if spec.routes.is_empty() {

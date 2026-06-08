@@ -111,8 +111,8 @@ impl CodexRequestBuilder {
         self.map(|builder| builder.body(body))
     }
 
-    pub async fn send(self) -> Result<Response, reqwest::Error> {
-        self.send_with_purpose_inner().await
+    pub async fn send(self) -> anyhow::Result<Response> {
+        self.send_with_purpose(NetworkPurpose::ModelApi).await
     }
 
     pub async fn send_with_purpose(self, purpose: NetworkPurpose) -> anyhow::Result<Response> {
@@ -142,36 +142,6 @@ impl CodexRequestBuilder {
                     "Request failed"
                 );
 
-                Err(error)
-            }
-        }
-    }
-
-    async fn send_with_purpose_inner(self) -> Result<Response, reqwest::Error> {
-        let headers = trace_headers();
-
-        match self.builder.headers(headers).send().await {
-            Ok(response) => {
-                tracing::debug!(
-                    method = %self.method,
-                    url = %self.url,
-                    status = %response.status(),
-                    headers = ?response.headers(),
-                    version = ?response.version(),
-                    "Request completed"
-                );
-
-                Ok(response)
-            }
-            Err(error) => {
-                let status = error.status();
-                tracing::debug!(
-                    method = %self.method,
-                    url = %self.url,
-                    status = status.map(|s| s.as_u16()),
-                    error = %error,
-                    "Request failed"
-                );
                 Err(error)
             }
         }

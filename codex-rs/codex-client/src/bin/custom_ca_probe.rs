@@ -19,6 +19,9 @@ use std::env;
 use std::process;
 use std::time::Duration;
 
+use codex_utils_safety::safe_network;
+use codex_utils_safety::safe_network::NetworkPurpose;
+
 const PROBE_TLS13_ENV: &str = "CODEX_CUSTOM_CA_PROBE_TLS13";
 const PROBE_PROXY_ENV: &str = "CODEX_CUSTOM_CA_PROBE_PROXY";
 const PROBE_URL_ENV: &str = "CODEX_CUSTOM_CA_PROBE_URL";
@@ -78,13 +81,15 @@ fn build_probe_client(
 }
 
 async fn post_probe_request(client: &reqwest::Client, url: &str) -> Result<(), String> {
-    let response = client
-        .post(url)
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .body("grant_type=authorization_code&code=test")
-        .send()
-        .await
-        .map_err(|error| format!("probe request failed: {error:?}"))?;
+    let response = safe_network::send(
+        NetworkPurpose::Other,
+        client
+            .post(url)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body("grant_type=authorization_code&code=test"),
+    )
+    .await
+    .map_err(|error| format!("probe request failed: {error:?}"))?;
     let status = response.status();
     let body = response
         .text()

@@ -757,7 +757,6 @@ async fn connect_unix_socket_endpoint(
                 format!("invalid UDS websocket handshake URL: {err}"),
             )
         })?;
-    safe_network::ensure_allowed(NetworkPurpose::Other).map_err(IoError::other)?;
     let stream = timeout(CONNECT_TIMEOUT, UnixStream::connect(socket_path.as_path()))
         .await
         .map_err(|_| {

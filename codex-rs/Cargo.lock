@@ -3107,6 +3107,7 @@ dependencies = [
  "codex-protocol",
  "codex-sandboxing",
  "codex-utils-absolute-path",
+ "codex-utils-safety",
  "globset",
  "landlock",
  "libc",
