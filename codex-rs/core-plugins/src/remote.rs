@@ -97,6 +97,7 @@ const REMOTE_INSTALLED_MARKETPLACE_DISPLAY_ORDER: [(&str, &str); 5] = [
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RemotePluginServiceConfig {
     pub chatgpt_base_url: String,
+    pub safe_mode: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]

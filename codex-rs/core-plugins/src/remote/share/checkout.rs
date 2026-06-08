@@ -40,6 +40,11 @@ pub async fn checkout_remote_plugin_share(
     codex_home: &Path,
     remote_plugin_id: &str,
 ) -> Result<RemotePluginShareCheckoutResult, RemotePluginCatalogError> {
+    if config.safe_mode {
+        return Err(RemotePluginCatalogError::UnexpectedResponse(
+            "remote plugin share checkout is disabled in SafeMode".to_string(),
+        ));
+    }
     let detail = super::super::fetch_remote_plugin_detail_with_download_urls(
         config,
         auth,
@@ -95,6 +100,7 @@ pub async fn checkout_remote_plugin_share(
         crate::remote_bundle::download_and_extract_remote_plugin_bundle_to_path(
             bundle,
             local_plugin_path.clone(),
+            config.safe_mode,
         )
         .await
         .map_err(|err| {

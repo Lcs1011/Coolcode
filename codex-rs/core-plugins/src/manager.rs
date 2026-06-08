@@ -89,6 +89,7 @@ pub struct PluginsConfigInput {
     pub plugins_enabled: bool,
     pub remote_plugin_enabled: bool,
     pub chatgpt_base_url: String,
+    pub safe_mode: bool,
 }
 
 impl PluginsConfigInput {
@@ -97,12 +98,14 @@ impl PluginsConfigInput {
         plugins_enabled: bool,
         remote_plugin_enabled: bool,
         chatgpt_base_url: String,
+        safe_mode: bool,
     ) -> Self {
         Self {
             config_layer_stack,
             plugins_enabled,
             remote_plugin_enabled,
             chatgpt_base_url,
+            safe_mode,
         }
     }
 }
@@ -173,6 +176,7 @@ struct ConfiguredMarketplaceUpgradeState {
 fn remote_plugin_service_config(config: &PluginsConfigInput) -> RemotePluginServiceConfig {
     RemotePluginServiceConfig {
         chatgpt_base_url: config.chatgpt_base_url.clone(),
+        safe_mode: config.safe_mode,
     }
 }
 
@@ -388,7 +392,7 @@ impl PluginsManager {
         config: &PluginsConfigInput,
         force_reload: bool,
     ) -> PluginLoadOutcome {
-        if !config.plugins_enabled {
+        if !config.plugins_enabled || config.safe_mode {
             return PluginLoadOutcome::default();
         }
 
@@ -446,7 +450,7 @@ impl PluginsManager {
         config_layer_stack: &ConfigLayerStack,
         config: &PluginsConfigInput,
     ) -> PluginLoadOutcome {
-        if !config.plugins_enabled {
+        if !config.plugins_enabled || config.safe_mode {
             return PluginLoadOutcome::default();
         }
         load_plugins_from_layer_stack(
@@ -465,7 +469,7 @@ impl PluginsManager {
         config_layer_stack: &ConfigLayerStack,
         config: &PluginsConfigInput,
     ) -> PluginHookLoadOutcome {
-        if !config.plugins_enabled {
+        if !config.plugins_enabled || config.safe_mode {
             return PluginHookLoadOutcome::default();
         }
         load_plugin_hooks_from_layer_stack(
@@ -555,7 +559,7 @@ impl PluginsManager {
         config: &PluginsConfigInput,
         auth: Option<&CodexAuth>,
     ) -> Vec<crate::remote::RemoteDiscoverablePlugin> {
-        if !config.plugins_enabled || !config.remote_plugin_enabled {
+        if !config.plugins_enabled || !config.remote_plugin_enabled || config.safe_mode {
             return Vec::new();
         }
         let Some(auth) = auth.filter(|auth| auth.uses_codex_backend()) else {
@@ -582,6 +586,9 @@ impl PluginsManager {
         visible_scopes: &[RemotePluginScope],
         on_effective_plugins_changed: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
     ) -> Result<Vec<crate::remote::RemoteMarketplace>, RemotePluginCatalogError> {
+        if config.safe_mode {
+            return Ok(Vec::new());
+        }
         let plugins = crate::remote::fetch_remote_installed_plugins(
             &remote_plugin_service_config(config),
             auth,
@@ -659,7 +666,7 @@ impl PluginsManager {
         notify: RemoteInstalledPluginsCacheRefreshNotify,
         on_effective_plugins_changed: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
     ) {
-        if !config.plugins_enabled {
+        if !config.plugins_enabled || config.safe_mode {
             return;
         }
 
@@ -679,7 +686,7 @@ impl PluginsManager {
         auth: Option<CodexAuth>,
         on_effective_plugins_changed: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
     ) {
-        if !config.plugins_enabled {
+        if !config.plugins_enabled || config.safe_mode {
             return;
         }
 
@@ -709,6 +716,9 @@ impl PluginsManager {
         roots: &[AbsolutePathBuf],
         on_effective_plugins_changed: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
     ) {
+        if !config.plugins_enabled || config.safe_mode {
+            return;
+        }
         self.maybe_start_non_curated_plugin_cache_refresh(roots);
         self.maybe_start_remote_installed_plugins_cache_refresh(
             config,

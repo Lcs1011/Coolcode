@@ -3408,9 +3408,12 @@ async fn build_hooks_for_config(
     let hook_shell_program = hook_shell_argv.remove(0);
     let _ = hook_shell_argv.pop();
     let plugins_input = config.plugins_config_input();
-    let plugin_outcome = plugins_manager.plugins_for_config(&plugins_input).await;
-    let plugin_hook_sources = plugin_outcome.effective_plugin_hook_sources();
-    let plugin_hook_load_warnings = plugin_outcome.effective_plugin_hook_warnings();
+    let (plugin_hook_sources, plugin_hook_load_warnings) = if config.safe_mode {
+        (vec![], vec![])
+    } else {
+        let plugin_outcome = plugins_manager.plugins_for_config(&plugins_input).await;
+        (plugin_outcome.effective_plugin_hook_sources(), plugin_outcome.effective_plugin_hook_warnings())
+    };
     Hooks::new(HooksConfig {
         legacy_notify_argv: config.notify.clone(),
         feature_enabled: config.features.enabled(Feature::CodexHooks),

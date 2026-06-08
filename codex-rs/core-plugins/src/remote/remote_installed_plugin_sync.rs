@@ -84,6 +84,9 @@ pub(crate) fn maybe_start_remote_installed_plugin_bundle_sync(
     auth: Option<CodexAuth>,
     on_local_cache_changed: Option<Arc<dyn Fn() + Send + Sync + 'static>>,
 ) {
+    if config.safe_mode {
+        return;
+    }
     let Some(auth) = auth else {
         return;
     };
@@ -127,6 +130,9 @@ pub async fn sync_remote_installed_plugin_bundles_once(
     config: &RemotePluginServiceConfig,
     auth: Option<&CodexAuth>,
 ) -> Result<RemoteInstalledPluginBundleSyncOutcome, RemoteInstalledPluginBundleSyncError> {
+    if config.safe_mode {
+        return Ok(RemoteInstalledPluginBundleSyncOutcome::default());
+    }
     let auth = ensure_chatgpt_auth(auth)?;
     let global = async {
         let scope = RemotePluginScope::Global;
@@ -227,6 +233,7 @@ pub async fn sync_remote_installed_plugin_bundles_once(
             match crate::remote_bundle::download_and_install_remote_plugin_bundle(
                 codex_home.clone(),
                 bundle,
+                config.safe_mode,
             )
             .await
             {

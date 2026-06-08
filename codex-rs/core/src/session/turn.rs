@@ -157,8 +157,11 @@ pub(crate) async fn run_turn(
     sess.record_context_updates_and_set_reference_context_item(turn_context.as_ref())
         .await;
 
-    let (injection_items, explicitly_enabled_connectors) =
-        build_skills_and_plugins(&sess, turn_context.as_ref(), &input, &cancellation_token).await?;
+    let (injection_items, explicitly_enabled_connectors) = if turn_context.config.safe_mode {
+        (Vec::new(), HashSet::new())
+    } else {
+        build_skills_and_plugins(&sess, turn_context.as_ref(), &input, &cancellation_token).await?
+    };
 
     if run_pending_session_start_hooks(&sess, &turn_context).await {
         return None;
@@ -434,6 +437,9 @@ async fn build_skills_and_plugins(
     input: &[TurnInput],
     cancellation_token: &CancellationToken,
 ) -> Option<(Vec<ResponseItem>, HashSet<String>)> {
+    if turn_context.config.safe_mode {
+        return Some((Vec::new(), HashSet::new()));
+    }
     let user_input = input
         .iter()
         .filter_map(|item| match item {
@@ -591,6 +597,9 @@ async fn build_extension_turn_input_items(
     user_input: &[UserInput],
     cancellation_token: &CancellationToken,
 ) -> Option<Vec<ResponseItem>> {
+    if turn_context.config.safe_mode {
+        return Some(Vec::new());
+    }
     let contributors = sess.services.extensions.turn_input_contributors().to_vec();
     if contributors.is_empty() {
         return Some(Vec::new());

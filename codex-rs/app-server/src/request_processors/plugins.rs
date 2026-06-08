@@ -324,6 +324,13 @@ fn plugin_share_principal_from_remote(
 }
 
 impl PluginRequestProcessor {
+    fn reject_plugins_in_safe_mode(config: &Config) -> Result<(), JSONRPCErrorError> {
+        if config.safe_mode {
+            return Err(invalid_request("plugins are disabled in SafeMode"));
+        }
+        Ok(())
+    }
+
     pub(crate) fn new(
         auth_manager: Arc<AuthManager>,
         thread_manager: Arc<ThreadManager>,
@@ -532,6 +539,9 @@ impl PluginRequestProcessor {
             marketplace_load_errors: Vec::new(),
             featured_plugin_ids: Vec::new(),
         };
+        if config.safe_mode {
+            return Ok(empty_response());
+        }
         if !config.features.enabled(Feature::Plugins) {
             return Ok(empty_response());
         }
@@ -751,6 +761,9 @@ impl PluginRequestProcessor {
             marketplace_load_errors: Vec::new(),
         };
         let config = self.load_latest_config(/*fallback_cwd*/ None).await?;
+        if config.safe_mode {
+            return Ok(empty_response());
+        }
         if !config.features.enabled(Feature::Plugins) {
             return Ok(empty_response());
         }
@@ -946,6 +959,7 @@ impl PluginRequestProcessor {
         });
 
         let config = self.load_latest_config(config_cwd).await?;
+        Self::reject_plugins_in_safe_mode(&config)?;
         let plugins_input = config.plugins_config_input();
 
         let plugin = match read_source {
@@ -1119,6 +1133,7 @@ impl PluginRequestProcessor {
         } = params;
 
         let config = self.load_latest_config(/*fallback_cwd*/ None).await?;
+        Self::reject_plugins_in_safe_mode(&config)?;
         if !config.features.enabled(Feature::Plugins) {
             return Err(invalid_request(format!(
                 "remote plugin skill read is not enabled for marketplace {remote_marketplace_name}"
@@ -1134,6 +1149,7 @@ impl PluginRequestProcessor {
         let auth = self.auth_manager.auth().await;
         let remote_plugin_service_config = RemotePluginServiceConfig {
             chatgpt_base_url: config.chatgpt_base_url.clone(),
+            safe_mode: config.safe_mode,
         };
         let remote_skill_detail = codex_core_plugins::remote::fetch_remote_plugin_skill_detail(
             &remote_plugin_service_config,
@@ -1187,6 +1203,7 @@ impl PluginRequestProcessor {
 
         let remote_plugin_service_config = RemotePluginServiceConfig {
             chatgpt_base_url: config.chatgpt_base_url.clone(),
+            safe_mode: config.safe_mode,
         };
         let access_policy = codex_core_plugins::remote::RemotePluginShareAccessPolicy {
             discoverability: discoverability.map(remote_plugin_share_discoverability),
@@ -1230,6 +1247,7 @@ impl PluginRequestProcessor {
 
         let remote_plugin_service_config = RemotePluginServiceConfig {
             chatgpt_base_url: config.chatgpt_base_url.clone(),
+            safe_mode: config.safe_mode,
         };
         let result = codex_core_plugins::remote::update_remote_plugin_share_targets(
             &remote_plugin_service_config,
@@ -1260,6 +1278,7 @@ impl PluginRequestProcessor {
         let (config, auth) = self.load_plugin_share_config_and_auth().await?;
         let remote_plugin_service_config = RemotePluginServiceConfig {
             chatgpt_base_url: config.chatgpt_base_url.clone(),
+            safe_mode: config.safe_mode,
         };
         let data = codex_core_plugins::remote::list_remote_plugin_shares(
             &remote_plugin_service_config,
@@ -1299,6 +1318,7 @@ impl PluginRequestProcessor {
 
         let remote_plugin_service_config = RemotePluginServiceConfig {
             chatgpt_base_url: config.chatgpt_base_url.clone(),
+            safe_mode: config.safe_mode,
         };
         let result = codex_core_plugins::remote::checkout_remote_plugin_share(
             &remote_plugin_service_config,
@@ -1332,6 +1352,7 @@ impl PluginRequestProcessor {
 
         let remote_plugin_service_config = RemotePluginServiceConfig {
             chatgpt_base_url: config.chatgpt_base_url.clone(),
+            safe_mode: config.safe_mode,
         };
         codex_core_plugins::remote::delete_remote_plugin_share(
             &remote_plugin_service_config,
@@ -1349,6 +1370,7 @@ impl PluginRequestProcessor {
         &self,
     ) -> Result<(Config, Option<CodexAuth>), JSONRPCErrorError> {
         let config = self.load_latest_config(/*fallback_cwd*/ None).await?;
+        Self::reject_plugins_in_safe_mode(&config)?;
         if !config.features.enabled(Feature::Plugins) {
             return Err(invalid_request("plugin sharing is not enabled"));
         }
@@ -1380,6 +1402,7 @@ impl PluginRequestProcessor {
         };
         let config_cwd = marketplace_path.as_path().parent().map(Path::to_path_buf);
         let config = self.load_latest_config(config_cwd.clone()).await?;
+        Self::reject_plugins_in_safe_mode(&config)?;
         let auth = self.auth_manager.auth().await;
 
         if !self
@@ -1442,6 +1465,7 @@ impl PluginRequestProcessor {
         remote_plugin_id: String,
     ) -> Result<PluginInstallResponse, JSONRPCErrorError> {
         let config = self.load_latest_config(/*fallback_cwd*/ None).await?;
+        Self::reject_plugins_in_safe_mode(&config)?;
         if !config.features.enabled(Feature::Plugins) {
             return Err(invalid_request(format!(
                 "remote plugin install is not enabled for marketplace {remote_marketplace_name}"
@@ -1452,6 +1476,7 @@ impl PluginRequestProcessor {
         let auth = self.auth_manager.auth().await;
         let remote_plugin_service_config = RemotePluginServiceConfig {
             chatgpt_base_url: config.chatgpt_base_url.clone(),
+            safe_mode: config.safe_mode,
         };
         let remote_detail =
             codex_core_plugins::remote::fetch_remote_plugin_detail_with_download_urls(
@@ -1499,6 +1524,7 @@ impl PluginRequestProcessor {
         let result = codex_core_plugins::remote_bundle::download_and_install_remote_plugin_bundle(
             config.codex_home.to_path_buf(),
             validated_bundle,
+            config.safe_mode,
         )
         .await
         .map_err(remote_plugin_bundle_install_error_to_jsonrpc)?;
@@ -1558,7 +1584,10 @@ impl PluginRequestProcessor {
         plugin_id: &str,
         plugin_apps: &[codex_plugin::AppConnectorId],
     ) -> Vec<AppSummary> {
-        if plugin_apps.is_empty() || !config.features.apps_enabled_for_auth(is_chatgpt_auth) {
+        if config.safe_mode
+            || plugin_apps.is_empty()
+            || !config.features.apps_enabled_for_auth(is_chatgpt_auth)
+        {
             return Vec::new();
         }
 
@@ -1709,6 +1738,8 @@ impl PluginRequestProcessor {
         if is_valid_remote_plugin_id(&plugin_id) {
             return self.remote_plugin_uninstall_response(plugin_id).await;
         }
+        let config = self.load_latest_config(/*fallback_cwd*/ None).await?;
+        Self::reject_plugins_in_safe_mode(&config)?;
         let plugins_manager = self.thread_manager.plugins_manager();
 
         plugins_manager
@@ -1792,6 +1823,7 @@ impl PluginRequestProcessor {
         plugin_id: String,
     ) -> Result<PluginUninstallResponse, JSONRPCErrorError> {
         let config = self.load_latest_config(/*fallback_cwd*/ None).await?;
+        Self::reject_plugins_in_safe_mode(&config)?;
         if !config.features.enabled(Feature::Plugins) {
             return Err(invalid_request("remote plugin uninstall is not enabled"));
         }
@@ -1800,6 +1832,7 @@ impl PluginRequestProcessor {
         let auth = self.auth_manager.auth().await;
         let remote_plugin_service_config = RemotePluginServiceConfig {
             chatgpt_base_url: config.chatgpt_base_url.clone(),
+            safe_mode: config.safe_mode,
         };
         let uninstall_result = codex_core_plugins::remote::uninstall_remote_plugin(
             &remote_plugin_service_config,

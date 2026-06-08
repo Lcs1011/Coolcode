@@ -158,6 +158,9 @@ impl TurnContext {
     }
 
     pub(crate) fn apps_enabled(&self) -> bool {
+        if self.config.safe_mode {
+            return false;
+        }
         let uses_codex_backend = self
             .auth_manager
             .as_deref()

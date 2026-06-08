@@ -435,6 +435,9 @@ async fn warm_plugins_and_skills_for_session_init(
     skills_manager: Arc<SkillsManager>,
     environments: Vec<TurnEnvironmentSelection>,
 ) -> Vec<SkillError> {
+    if config.safe_mode {
+        return Vec::new();
+    }
     let fs = crate::environment_selection::resolve_environment_selections(
         environment_manager.as_ref(),
         &environments,
@@ -613,6 +616,9 @@ impl Session {
         let mcp_manager_for_mcp = Arc::clone(&mcp_manager);
         let auth_and_mcp_fut = async move {
             let auth = auth_manager_clone.auth().await;
+            if config_for_mcp.safe_mode {
+                return (auth, Default::default(), Default::default());
+            }
             let mcp_servers = mcp_manager_for_mcp
                 .effective_servers(&config_for_mcp, auth.as_ref())
                 .await;
@@ -953,14 +959,16 @@ impl Session {
                 codex_extension_api::ExtensionData::new(session_id.to_string());
             let thread_extension_data =
                 codex_extension_api::ExtensionData::new(thread_id.to_string());
-            for contributor in extensions.thread_lifecycle_contributors() {
-                contributor.on_thread_start(codex_extension_api::ThreadStartInput {
-                    config: config.as_ref(),
-                    session_source: &session_configuration.session_source,
-                    persistent_thread_state_available: state_db_ctx.is_some(),
-                    session_store: &session_extension_data,
-                    thread_store: &thread_extension_data,
-                }).await;
+            if !config.safe_mode {
+                for contributor in extensions.thread_lifecycle_contributors() {
+                    contributor.on_thread_start(codex_extension_api::ThreadStartInput {
+                        config: config.as_ref(),
+                        session_source: &session_configuration.session_source,
+                        persistent_thread_state_available: state_db_ctx.is_some(),
+                        session_store: &session_extension_data,
+                        thread_store: &thread_extension_data,
+                    }).await;
+                }
             }
 
             let services = SessionServices {
@@ -1111,11 +1119,18 @@ impl Session {
             let enabled_mcp_server_count =
                 mcp_servers.values().filter(|server| server.enabled()).count();
             let required_mcp_server_count = required_mcp_servers.len();
-            let tool_plugin_provenance = mcp_manager.tool_plugin_provenance(config.as_ref()).await;
-            let host_owned_codex_apps_enabled = config
-                .features
-                .apps_enabled_for_auth(auth.as_ref().is_some_and(|auth| auth.uses_codex_backend()));
-            let client_elicitation_capability = if config.features.enabled(Feature::AuthElicitation) {
+            let tool_plugin_provenance = if config.safe_mode {
+                Default::default()
+            } else {
+                mcp_manager.tool_plugin_provenance(config.as_ref()).await
+            };
+            let host_owned_codex_apps_enabled = !config.safe_mode
+                && config
+                    .features
+                    .apps_enabled_for_auth(auth.as_ref().is_some_and(|auth| auth.uses_codex_backend()));
+            let client_elicitation_capability = if !config.safe_mode
+                && config.features.enabled(Feature::AuthElicitation)
+            {
                 ElicitationCapability {
                     form: Some(FormElicitationCapability::default()),
                     url: Some(UrlElicitationCapability::default()),

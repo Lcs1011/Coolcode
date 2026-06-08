@@ -226,7 +226,13 @@ fn is_loopback_url(url: &Url) -> bool {
 pub async fn download_and_install_remote_plugin_bundle(
     codex_home: PathBuf,
     bundle: ValidatedRemotePluginBundle,
+    safe_mode: bool,
 ) -> Result<PluginInstallResult, RemotePluginBundleInstallError> {
+    if safe_mode {
+        return Err(RemotePluginBundleInstallError::InvalidBundle(
+            "remote plugin bundle download and install is disabled in SafeMode".to_string(),
+        ));
+    }
     let bundle_bytes = download_remote_plugin_bundle_with_limit(
         &bundle.bundle_download_url,
         /*max_bytes*/ REMOTE_PLUGIN_BUNDLE_MAX_DOWNLOAD_BYTES,
@@ -246,7 +252,13 @@ pub async fn download_and_install_remote_plugin_bundle(
 pub(crate) async fn download_and_extract_remote_plugin_bundle_to_path(
     bundle: ValidatedRemotePluginBundle,
     destination: AbsolutePathBuf,
+    safe_mode: bool,
 ) -> Result<AbsolutePathBuf, RemotePluginBundleInstallError> {
+    if safe_mode {
+        return Err(RemotePluginBundleInstallError::InvalidBundle(
+            "remote plugin bundle download and extract is disabled in SafeMode".to_string(),
+        ));
+    }
     let bundle_bytes = download_remote_plugin_bundle_with_limit(
         &bundle.bundle_download_url,
         /*max_bytes*/ REMOTE_PLUGIN_BUNDLE_MAX_DOWNLOAD_BYTES,
