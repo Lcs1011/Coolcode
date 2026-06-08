@@ -7,18 +7,22 @@ use crate::error::CToolResult;
 use crate::scope::CToolScope;
 
 pub fn ensure_read_allowed(ctx: &CToolContext, path: &Path) -> CToolResult<()> {
-    ensure_path_allowed(ctx, path, "read")
+    ensure_existing_path_allowed(ctx, path, "read")
 }
 
 pub fn ensure_write_allowed(ctx: &CToolContext, path: &Path) -> CToolResult<()> {
-    ensure_path_allowed(ctx, path, "write")
+    ensure_existing_path_allowed(ctx, path, "write")
 }
 
 pub fn ensure_search_allowed(ctx: &CToolContext, path: &Path) -> CToolResult<()> {
-    ensure_path_allowed(ctx, path, "search")
+    ensure_existing_path_allowed(ctx, path, "search")
 }
 
-fn ensure_path_allowed(
+pub fn ensure_create_allowed(ctx: &CToolContext, path: &Path) -> CToolResult<()> {
+    ensure_new_path_parent_allowed(ctx, path, "create")
+}
+
+fn ensure_existing_path_allowed(
     ctx: &CToolContext,
     path: &Path,
     operation: &'static str,
@@ -53,6 +57,21 @@ fn ensure_path_allowed(
             })
         }
     }
+}
+
+fn ensure_new_path_parent_allowed(
+    ctx: &CToolContext,
+    path: &Path,
+    operation: &'static str,
+) -> CToolResult<()> {
+    let Some(parent) = path.parent() else {
+        return Err(CToolError::InvalidInput(format!(
+            "path has no parent directory: {}",
+            path.display()
+        )));
+    };
+
+    ensure_existing_path_allowed(ctx, parent, operation)
 }
 
 fn canonicalize_existing_path(path: &Path, operation: &'static str) -> CToolResult<PathBuf> {
