@@ -1,4 +1,5 @@
 use std::path::Path;
+use std::path::PathBuf;
 
 use crate::context::CToolContext;
 use crate::error::CToolError;
@@ -28,11 +29,15 @@ fn ensure_path_allowed(
             operation,
         }),
         CToolScope::Workspace => {
-            if ctx
+            let path = canonicalize_existing_path(path, operation)?;
+
+            let is_allowed = ctx
                 .workspace_roots
                 .iter()
-                .any(|root| path.starts_with(root))
-            {
+                .filter_map(|root| canonicalize_existing_path(root, operation).ok())
+                .any(|root| path.starts_with(root));
+
+            if is_allowed {
                 Ok(())
             } else {
                 Err(CToolError::OutOfScope {
@@ -48,4 +53,13 @@ fn ensure_path_allowed(
             })
         }
     }
+}
+
+fn canonicalize_existing_path(path: &Path, operation: &'static str) -> CToolResult<PathBuf> {
+    std::fs::canonicalize(path).map_err(|error| {
+        CToolError::InvalidInput(format!(
+            "failed to canonicalize path for {operation}: {} ({error})",
+            path.display()
+        ))
+    })
 }

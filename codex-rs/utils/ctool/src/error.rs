@@ -19,7 +19,11 @@ pub enum CToolError {
         operation: &'static str,
     },
     InvalidInput(String),
+    Serialization(String),
     Io(String),
+    ToolNotFound {
+        name: String,
+    },
 }
 
 impl fmt::Display for CToolError {
@@ -40,8 +44,14 @@ impl fmt::Display for CToolError {
             CToolError::InvalidInput(message) => {
                 write!(f, "CTool invalid input: {message}")
             }
+            CToolError::Serialization(message) => {
+                write!(f, "CTool serialization error: {message}")
+            }
             CToolError::Io(message) => {
                 write!(f, "CTool IO error: {message}")
+            }
+            CToolError::ToolNotFound { name } => {
+                write!(f, "CTool not found: {name}")
             }
         }
     }
@@ -52,5 +62,11 @@ impl std::error::Error for CToolError {}
 impl From<std::io::Error> for CToolError {
     fn from(error: std::io::Error) -> Self {
         CToolError::Io(error.to_string())
+    }
+}
+
+impl From<serde_json::Error> for CToolError {
+    fn from(error: serde_json::Error) -> Self {
+        CToolError::Serialization(error.to_string())
     }
 }
