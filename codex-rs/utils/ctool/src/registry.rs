@@ -6,9 +6,11 @@ use crate::error::CToolResult;
 use crate::tool::CTool;
 use crate::tool::CToolSpec;
 use crate::tools::read::CTOOL_LIST_DIRECTORY_TOOL_NAME;
+use crate::tools::read::CTOOL_READ_CODE_RANGE_TOOL_NAME;
 use crate::tools::read::CTOOL_READ_FILE_TOOL_NAME;
 use crate::tools::read::CTOOL_RG_SEARCH_TOOL_NAME;
 use crate::tools::read::CToolListDirectory;
+use crate::tools::read::CToolReadCodeRange;
 use crate::tools::read::CToolReadFile;
 use crate::tools::read::CToolRgSearch;
 
@@ -37,6 +39,7 @@ use crate::tools::file_ops::CToolMoveFile;
 pub fn available_specs() -> Vec<CToolSpec> {
     let list_directory = CToolListDirectory;
     let rg_search = CToolRgSearch;
+    let read_code_range = CToolReadCodeRange;
     let read_file = CToolReadFile;
 
     let edit_replace = CToolEditReplace;
@@ -55,6 +58,7 @@ pub fn available_specs() -> Vec<CToolSpec> {
     vec![
         list_directory.spec(),
         rg_search.spec(),
+        read_code_range.spec(),
         read_file.spec(),
         edit_replace.spec(),
         edit_insert.spec(),
@@ -77,6 +81,10 @@ pub fn run_tool(name: &str, ctx: &CToolContext, input: Value) -> CToolResult<Val
         }
         CTOOL_RG_SEARCH_TOOL_NAME => {
             let tool = CToolRgSearch;
+            tool.run_json(ctx, input)
+        }
+        CTOOL_READ_CODE_RANGE_TOOL_NAME => {
+            let tool = CToolReadCodeRange;
             tool.run_json(ctx, input)
         }
         CTOOL_READ_FILE_TOOL_NAME => {
