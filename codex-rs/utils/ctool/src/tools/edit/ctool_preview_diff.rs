@@ -78,9 +78,9 @@ pub fn preview_diff(
         )));
     }
 
-    gate::ensure_write_allowed(ctx, &input.path)?;
+    let path = gate::ensure_read_allowed(ctx, &input.path)?;
 
-    let before = std::fs::read_to_string(&input.path)?;
+    let before = std::fs::read_to_string(&path)?;
     let mut after = before.clone();
 
     for operation in &input.operations {
@@ -100,7 +100,7 @@ pub fn preview_diff(
     let diff = make_simple_diff(&before, &after);
 
     Ok(CToolPreviewDiffOutput {
-        path: input.path.display().to_string(),
+        path: path.display().to_string(),
         operation_count: input.operations.len(),
         changed,
         diff,

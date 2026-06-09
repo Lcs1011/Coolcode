@@ -48,31 +48,31 @@ pub fn delete_file(
     ctx: &CToolContext,
     input: CToolDeleteFileInput,
 ) -> CToolResult<CToolDeleteFileOutput> {
-    gate::ensure_write_allowed(ctx, &input.path)?;
+    let path = gate::ensure_delete_allowed(ctx, &input.path)?;
 
-    let metadata = std::fs::metadata(&input.path)?;
+    let metadata = std::fs::metadata(&path)?;
     if !metadata.is_file() {
         return Err(CToolError::InvalidInput(format!(
             "delete_file only deletes files, not directories: {}",
-            input.path.display()
+            path.display()
         )));
     }
 
     if let Some(expected_content) = input.expected_content {
-        let actual_content = std::fs::read_to_string(&input.path)?;
+        let actual_content = std::fs::read_to_string(&path)?;
         if actual_content != expected_content {
             return Err(CToolError::InvalidInput(format!(
                 "expected_content did not match actual file content: {}",
-                input.path.display()
+                path.display()
             )));
         }
     }
 
     let byte_len_before = metadata.len();
-    std::fs::remove_file(&input.path)?;
+    std::fs::remove_file(&path)?;
 
     Ok(CToolDeleteFileOutput {
-        path: input.path.display().to_string(),
+        path: path.display().to_string(),
         byte_len_before,
         deleted: true,
     })

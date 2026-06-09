@@ -22,8 +22,7 @@ impl CToolContext {
         base_scope: CToolBaseScope,
         system_config_path: Option<PathBuf>,
     ) -> CToolResult<Self> {
-        let scope_context =
-            build_ctool_scope_context(current_dir, base_scope, system_config_path)?;
+        let scope_context = build_ctool_scope_context(current_dir, base_scope, system_config_path)?;
 
         Ok(Self::new(scope_context))
     }

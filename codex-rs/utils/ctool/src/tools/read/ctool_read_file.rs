@@ -57,17 +57,17 @@ pub fn read_file(
         )));
     }
 
-    gate::ensure_read_allowed(ctx, &input.path)?;
+    let path = gate::ensure_read_allowed(ctx, &input.path)?;
 
-    let metadata = std::fs::metadata(&input.path)?;
+    let metadata = std::fs::metadata(&path)?;
     if !metadata.is_file() {
         return Err(CToolError::InvalidInput(format!(
             "path is not a file: {}",
-            input.path.display()
+            path.display()
         )));
     }
 
-    let bytes = std::fs::read(&input.path)?;
+    let bytes = std::fs::read(&path)?;
     let byte_len = bytes.len() as u64;
     let truncated = byte_len > input.max_bytes;
     let usable_bytes = if truncated {
@@ -79,12 +79,12 @@ pub fn read_file(
     let content = String::from_utf8(usable_bytes.to_vec()).map_err(|error| {
         CToolError::InvalidInput(format!(
             "file is not valid UTF-8 text: {} ({error})",
-            input.path.display()
+            path.display()
         ))
     })?;
 
     Ok(CToolReadFileOutput {
-        path: input.path.display().to_string(),
+        path: path.display().to_string(),
         byte_len,
         truncated,
         content,

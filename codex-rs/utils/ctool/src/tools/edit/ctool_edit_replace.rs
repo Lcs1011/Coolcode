@@ -49,14 +49,14 @@ pub fn edit_replace(
     ctx: &CToolContext,
     input: CToolEditReplaceInput,
 ) -> CToolResult<CToolEditReplaceOutput> {
-    gate::ensure_write_allowed(ctx, &input.path)?;
+    let path = gate::ensure_write_allowed(ctx, &input.path)?;
 
-    let before = std::fs::read_to_string(&input.path)?;
+    let before = std::fs::read_to_string(&path)?;
     let after = apply_exact_replace_to_text(&before, &input.old_string, &input.new_string)?;
-    std::fs::write(&input.path, &after)?;
+    std::fs::write(&path, &after)?;
 
     Ok(CToolEditReplaceOutput {
-        path: input.path.display().to_string(),
+        path: path.display().to_string(),
         replaced: 1,
         byte_len_before: before.len(),
         byte_len_after: after.len(),

@@ -71,9 +71,9 @@ pub fn read_code_range(
         )));
     }
 
-    gate::ensure_read_allowed(ctx, &input.path)?;
+    let path = gate::ensure_read_allowed(ctx, &input.path)?;
 
-    let text = std::fs::read_to_string(&input.path)?;
+    let text = std::fs::read_to_string(&path)?;
     let lines: Vec<&str> = text.lines().collect();
     let total_lines = lines.len();
 
@@ -88,7 +88,7 @@ pub fn read_code_range(
     let content = lines[(input.start_line - 1)..effective_end_line].join("\n");
 
     Ok(CToolReadCodeRangeOutput {
-        path: input.path.display().to_string(),
+        path: path.display().to_string(),
         start_line: input.start_line,
         end_line: effective_end_line,
         total_lines,

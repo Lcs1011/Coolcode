@@ -45,19 +45,19 @@ pub fn create_directory(
     ctx: &CToolContext,
     input: CToolCreateDirectoryInput,
 ) -> CToolResult<CToolCreateDirectoryOutput> {
-    gate::ensure_create_allowed(ctx, &input.path)?;
+    let path = gate::ensure_create_allowed(ctx, &input.path)?;
 
-    if input.path.exists() {
+    if path.exists() {
         return Err(CToolError::InvalidInput(format!(
             "target already exists: {}",
-            input.path.display()
+            path.display()
         )));
     }
 
-    std::fs::create_dir(&input.path)?;
+    std::fs::create_dir(&path)?;
 
     Ok(CToolCreateDirectoryOutput {
-        path: input.path.display().to_string(),
+        path: path.display().to_string(),
         created: true,
     })
 }

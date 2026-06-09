@@ -52,8 +52,8 @@ pub fn create_file(
     ctx: &CToolContext,
     input: CToolCreateFileInput,
 ) -> CToolResult<CToolCreateFileOutput> {
-    gate::ensure_create_allowed(ctx, &input.path)?;
-    ensure_safe_create_extension(&input.path)?;
+    let path = gate::ensure_create_allowed(ctx, &input.path)?;
+    ensure_safe_create_extension(&path)?;
 
     let byte_len = input.content.len();
     if byte_len > MAX_CREATE_FILE_BYTES {
@@ -62,30 +62,30 @@ pub fn create_file(
         )));
     }
 
-    let existed = input.path.exists();
+    let existed = path.exists();
 
     if existed && !input.overwrite {
         return Err(CToolError::InvalidInput(format!(
             "file already exists: {}",
-            input.path.display()
+            path.display()
         )));
     }
 
     if existed {
-        gate::ensure_write_allowed(ctx, &input.path)?;
-        let metadata = std::fs::metadata(&input.path)?;
+        let path = gate::ensure_write_allowed(ctx, &path)?;
+        let metadata = std::fs::metadata(&path)?;
         if !metadata.is_file() {
             return Err(CToolError::InvalidInput(format!(
                 "target exists but is not a file: {}",
-                input.path.display()
+                path.display()
             )));
         }
     }
 
-    std::fs::write(&input.path, input.content)?;
+    std::fs::write(&path, input.content)?;
 
     Ok(CToolCreateFileOutput {
-        path: input.path.display().to_string(),
+        path: path.display().to_string(),
         byte_len,
         overwritten: existed,
     })

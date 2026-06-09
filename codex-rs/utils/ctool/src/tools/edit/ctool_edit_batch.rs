@@ -87,7 +87,7 @@ pub fn edit_batch(
                 old_string,
                 new_string,
             } => {
-                gate::ensure_write_allowed(ctx, &path)?;
+                let path = gate::ensure_write_allowed(ctx, &path)?;
 
                 if !text_by_path.contains_key(&path) {
                     text_by_path.insert(path.clone(), std::fs::read_to_string(&path)?);
@@ -104,7 +104,7 @@ pub fn edit_batch(
                 insert_after_line,
                 content,
             } => {
-                gate::ensure_write_allowed(ctx, &path)?;
+                let path = gate::ensure_write_allowed(ctx, &path)?;
 
                 if !text_by_path.contains_key(&path) {
                     text_by_path.insert(path.clone(), std::fs::read_to_string(&path)?);

@@ -50,45 +50,44 @@ pub fn move_file(
     ctx: &CToolContext,
     input: CToolMoveFileInput,
 ) -> CToolResult<CToolMoveFileOutput> {
-    gate::ensure_write_allowed(ctx, &input.from)?;
-    gate::ensure_create_allowed(ctx, &input.to)?;
+    let (from, to) = gate::ensure_move_allowed(ctx, &input.from, &input.to)?;
 
-    let from_metadata = std::fs::metadata(&input.from)?;
+    let from_metadata = std::fs::metadata(&from)?;
     if !from_metadata.is_file() {
         return Err(CToolError::InvalidInput(format!(
             "move_file only moves files, not directories: {}",
-            input.from.display()
+            from.display()
         )));
     }
 
-    let target_exists = input.to.exists();
+    let target_exists = to.exists();
 
     if target_exists {
-        gate::ensure_write_allowed(ctx, &input.to)?;
+        let to = gate::ensure_write_allowed(ctx, &to)?;
 
-        let to_metadata = std::fs::metadata(&input.to)?;
+        let to_metadata = std::fs::metadata(&to)?;
         if !to_metadata.is_file() {
             return Err(CToolError::InvalidInput(format!(
                 "target exists but is not a file: {}",
-                input.to.display()
+                to.display()
             )));
         }
 
         if !input.overwrite {
             return Err(CToolError::InvalidInput(format!(
                 "target file already exists: {}",
-                input.to.display()
+                to.display()
             )));
         }
 
-        std::fs::remove_file(&input.to)?;
+        std::fs::remove_file(&to)?;
     }
 
-    std::fs::rename(&input.from, &input.to)?;
+    std::fs::rename(&from, &to)?;
 
     Ok(CToolMoveFileOutput {
-        from: input.from.display().to_string(),
-        to: input.to.display().to_string(),
+        from: from.display().to_string(),
+        to: to.display().to_string(),
         overwritten: target_exists,
         moved: true,
     })

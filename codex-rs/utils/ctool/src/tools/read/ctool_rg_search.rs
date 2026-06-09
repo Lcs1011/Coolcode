@@ -89,9 +89,7 @@ pub fn rg_search(
         )));
     }
 
-    gate::ensure_search_allowed(ctx, &input.path)?;
-
-    let root = fs::canonicalize(&input.path)?;
+    let root = gate::ensure_search_allowed(ctx, &input.path)?;
     let needle = if input.case_sensitive {
         input.query.clone()
     } else {
@@ -220,14 +218,14 @@ fn search_file(
     matches: &mut Vec<CToolRgSearchMatch>,
     truncated: &mut bool,
 ) -> CToolResult<()> {
-    gate::ensure_read_allowed(ctx, file_path)?;
+    let file_path = gate::ensure_read_allowed(ctx, file_path)?;
 
-    let metadata = fs::metadata(file_path)?;
+    let metadata = fs::metadata(&file_path)?;
     if metadata.len() > MAX_RG_SEARCH_FILE_BYTES {
         return Ok(());
     }
 
-    let Ok(text) = fs::read_to_string(file_path) else {
+    let Ok(text) = fs::read_to_string(&file_path) else {
         return Ok(());
     };
 
@@ -247,7 +245,7 @@ fn search_file(
             let preview = truncate_line(line, MAX_LINE_PREVIEW_CHARS);
             let display_path = file_path
                 .strip_prefix(root)
-                .unwrap_or(file_path)
+                .unwrap_or(file_path.as_path())
                 .display()
                 .to_string();
 

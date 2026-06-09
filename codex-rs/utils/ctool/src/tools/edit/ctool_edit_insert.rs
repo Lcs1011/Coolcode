@@ -53,14 +53,14 @@ pub fn edit_insert(
     ctx: &CToolContext,
     input: CToolEditInsertInput,
 ) -> CToolResult<CToolEditInsertOutput> {
-    gate::ensure_write_allowed(ctx, &input.path)?;
+    let path = gate::ensure_write_allowed(ctx, &input.path)?;
 
-    let before = std::fs::read_to_string(&input.path)?;
+    let before = std::fs::read_to_string(&path)?;
     let after = apply_insert_after_line_to_text(&before, input.insert_after_line, &input.content)?;
-    std::fs::write(&input.path, &after)?;
+    std::fs::write(&path, &after)?;
 
     Ok(CToolEditInsertOutput {
-        path: input.path.display().to_string(),
+        path: path.display().to_string(),
         inserted_after_line: input.insert_after_line,
         byte_len_before: before.len(),
         byte_len_after: after.len(),

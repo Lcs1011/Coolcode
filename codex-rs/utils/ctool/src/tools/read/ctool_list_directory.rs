@@ -77,9 +77,7 @@ pub fn list_directory(
         )));
     }
 
-    gate::ensure_search_allowed(ctx, &input.path)?;
-
-    let root = fs::canonicalize(&input.path)?;
+    let root = gate::ensure_search_allowed(ctx, &input.path)?;
     let mut items = Vec::new();
     let mut truncated = false;
 
@@ -139,8 +137,7 @@ fn collect_directory_items(
             continue;
         }
 
-        let path = entry.path();
-        gate::ensure_read_allowed(ctx, &path)?;
+        let path = gate::ensure_read_allowed(ctx, &entry.path())?;
 
         let file_type = entry.file_type()?;
         let kind = if file_type.is_dir() {

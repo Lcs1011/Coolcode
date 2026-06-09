@@ -46,45 +46,42 @@ pub fn delete_directory(
     ctx: &CToolContext,
     input: CToolDeleteDirectoryInput,
 ) -> CToolResult<CToolDeleteDirectoryOutput> {
-    gate::ensure_write_allowed(ctx, &input.path)?;
+    let path = gate::ensure_delete_allowed(ctx, &input.path)?;
 
-    let metadata = std::fs::metadata(&input.path)?;
+    let metadata = std::fs::metadata(&path)?;
     if !metadata.is_dir() {
         return Err(CToolError::InvalidInput(format!(
             "delete_directory only deletes directories: {}",
-            input.path.display()
+            path.display()
         )));
     }
 
-    ensure_not_workspace_root(ctx, &input.path)?;
+    ensure_not_current_dir(ctx, &path)?;
 
-    if std::fs::read_dir(&input.path)?.next().is_some() {
+    if std::fs::read_dir(&path)?.next().is_some() {
         return Err(CToolError::InvalidInput(format!(
             "delete_directory only deletes empty directories: {}",
-            input.path.display()
+            path.display()
         )));
     }
 
-    std::fs::remove_dir(&input.path)?;
+    std::fs::remove_dir(&path)?;
 
     Ok(CToolDeleteDirectoryOutput {
-        path: input.path.display().to_string(),
+        path: path.display().to_string(),
         deleted: true,
     })
 }
 
-fn ensure_not_workspace_root(ctx: &CToolContext, path: &Path) -> CToolResult<()> {
+fn ensure_not_current_dir(ctx: &CToolContext, path: &Path) -> CToolResult<()> {
     let path = std::fs::canonicalize(path)?;
+    let current_dir = std::fs::canonicalize(&ctx.scope_context.current_dir)?;
 
-    for root in &ctx.workspace_roots {
-        if let Ok(root) = std::fs::canonicalize(root) {
-            if path == root {
-                return Err(CToolError::InvalidInput(format!(
-                    "refusing to delete workspace root: {}",
-                    path.display()
-                )));
-            }
-        }
+    if path == current_dir {
+        return Err(CToolError::InvalidInput(format!(
+            "refusing to delete current dir: {}",
+            path.display()
+        )));
     }
 
     Ok(())

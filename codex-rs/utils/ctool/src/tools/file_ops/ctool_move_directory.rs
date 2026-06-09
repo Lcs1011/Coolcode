@@ -48,48 +48,44 @@ pub fn move_directory(
     ctx: &CToolContext,
     input: CToolMoveDirectoryInput,
 ) -> CToolResult<CToolMoveDirectoryOutput> {
-    gate::ensure_write_allowed(ctx, &input.from)?;
-    gate::ensure_create_allowed(ctx, &input.to)?;
+    let (from, to) = gate::ensure_move_allowed(ctx, &input.from, &input.to)?;
 
-    let from_metadata = std::fs::metadata(&input.from)?;
+    let from_metadata = std::fs::metadata(&from)?;
     if !from_metadata.is_dir() {
         return Err(CToolError::InvalidInput(format!(
             "move_directory only moves directories: {}",
-            input.from.display()
+            from.display()
         )));
     }
 
-    ensure_not_workspace_root(ctx, &input.from)?;
-    ensure_target_not_inside_source(&input.from, &input.to)?;
+    ensure_not_current_dir(ctx, &from)?;
+    ensure_target_not_inside_source(&from, &to)?;
 
-    if input.to.exists() {
+    if to.exists() {
         return Err(CToolError::InvalidInput(format!(
             "target already exists; move_directory never overwrites: {}",
-            input.to.display()
+            to.display()
         )));
     }
 
-    std::fs::rename(&input.from, &input.to)?;
+    std::fs::rename(&from, &to)?;
 
     Ok(CToolMoveDirectoryOutput {
-        from: input.from.display().to_string(),
-        to: input.to.display().to_string(),
+        from: from.display().to_string(),
+        to: to.display().to_string(),
         moved: true,
     })
 }
 
-fn ensure_not_workspace_root(ctx: &CToolContext, path: &Path) -> CToolResult<()> {
+fn ensure_not_current_dir(ctx: &CToolContext, path: &Path) -> CToolResult<()> {
     let path = std::fs::canonicalize(path)?;
+    let current_dir = std::fs::canonicalize(&ctx.scope_context.current_dir)?;
 
-    for root in &ctx.workspace_roots {
-        if let Ok(root) = std::fs::canonicalize(root) {
-            if path == root {
-                return Err(CToolError::InvalidInput(format!(
-                    "refusing to move workspace root: {}",
-                    path.display()
-                )));
-            }
-        }
+    if path == current_dir {
+        return Err(CToolError::InvalidInput(format!(
+            "refusing to move current dir: {}",
+            path.display()
+        )));
     }
 
     Ok(())
