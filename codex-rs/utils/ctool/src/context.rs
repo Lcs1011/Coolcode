@@ -1,46 +1,46 @@
+use std::path::Path;
 use std::path::PathBuf;
 
+use crate::error::CToolResult;
 use crate::scope::CToolBaseScope;
+use crate::scope_config::locate_cool_system_config_path;
+use crate::scope_context::CToolScopeContext;
+use crate::scope_context::build_ctool_scope_context;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CToolContext {
-    pub scope: CToolBaseScope,
-    pub workspace_roots: Vec<PathBuf>,
-    pub selected_paths: Vec<PathBuf>,
+    pub scope_context: CToolScopeContext,
 }
 
 impl CToolContext {
-    pub fn new(
-        scope: CToolBaseScope,
-        workspace_roots: Vec<PathBuf>,
-        selected_paths: Vec<PathBuf>,
-    ) -> Self {
-        Self {
-            scope,
-            workspace_roots,
-            selected_paths,
-        }
+    pub fn new(scope_context: CToolScopeContext) -> Self {
+        Self { scope_context }
     }
 
-    pub fn workspace(workspace_roots: Vec<PathBuf>) -> Self {
-        Self {
-            scope: CToolBaseScope::Workspace,
-            workspace_roots,
-            selected_paths: Vec::new(),
-        }
+    pub fn from_current_dir(
+        current_dir: impl AsRef<Path>,
+        base_scope: CToolBaseScope,
+        system_config_path: Option<PathBuf>,
+    ) -> CToolResult<Self> {
+        let scope_context =
+            build_ctool_scope_context(current_dir, base_scope, system_config_path)?;
+
+        Ok(Self::new(scope_context))
     }
 
-    pub fn none() -> Self {
-        Self {
-            scope: CToolBaseScope::None,
-            workspace_roots: Vec::new(),
-            selected_paths: Vec::new(),
-        }
+    pub fn workspace(current_dir: impl AsRef<Path>) -> CToolResult<Self> {
+        Self::from_current_dir(
+            current_dir,
+            CToolBaseScope::Workspace,
+            locate_cool_system_config_path(),
+        )
     }
-}
 
-impl Default for CToolContext {
-    fn default() -> Self {
-        Self::none()
+    pub fn none(current_dir: impl AsRef<Path>) -> CToolResult<Self> {
+        Self::from_current_dir(
+            current_dir,
+            CToolBaseScope::None,
+            locate_cool_system_config_path(),
+        )
     }
 }

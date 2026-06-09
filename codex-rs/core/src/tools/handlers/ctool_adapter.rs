@@ -61,9 +61,14 @@ impl ToolExecutor<ToolInvocation> for CToolHandler {
         })?;
 
         #[allow(deprecated)]
-        let workspace_root = invocation.turn.cwd.as_path().to_path_buf();
+        let current_dir = invocation.turn.cwd.as_path();
 
-        let ctx = ctool::CToolContext::workspace(vec![workspace_root]);
+        let ctx = ctool::CToolContext::workspace(current_dir).map_err(|error| {
+            FunctionCallError::RespondToModel(format!(
+                "failed to initialize CToolScope for {}: {error}",
+                self.name
+            ))
+        })?;
 
         let output = ctool::registry::run_tool(&self.name, &ctx, input).map_err(|error| {
             FunctionCallError::RespondToModel(format!("{} failed: {error}", self.name))
