@@ -126,9 +126,15 @@ fn ctool_description(name: &str, base_description: &str) -> String {
 
 Use this only when normal CTool file tools cannot complete the task.
 
-This is a controlled command tool that previews commands before execution.
+This is a controlled command request tool.
 It classifies every command as GREEN / YELLOW / RED, computes the highest batch risk,
-renders a very visible COMMAND REQUEST banner, and tells whether confirmation is required.
+renders a very visible COMMAND REQUEST banner, and reports whether execution happened.
+
+Important display rule:
+After every call, paste output.display_text verbatim to the user.
+Do not summarize it.
+Do not omit the COMMAND REQUEST banner.
+If result_file or log_file exists, show them as part of output.display_text.
 
 Rules:
 - Prefer normal CTool read/edit/file tools.
@@ -136,7 +142,8 @@ Rules:
 - Unknown commands are RED.
 - Downloads and opening websites are RED.
 - AI may upgrade risk, but cannot downgrade risk.
-- This tool never automatically executes commands."#
+- GREEN commands may auto-execute only when allowed by the user's whitelist.
+- YELLOW and RED commands never execute in this version."#
         }
         "ctool_list_directory" => {
             r#"Input JSON:
