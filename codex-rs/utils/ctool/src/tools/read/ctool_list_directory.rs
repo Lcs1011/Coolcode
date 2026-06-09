@@ -50,7 +50,7 @@ impl CTool for CToolListDirectory {
     fn spec(&self) -> CToolSpec {
         CToolSpec {
             name: CTOOL_LIST_DIRECTORY_TOOL_NAME,
-            description: "List directory entries inside CToolScope.",
+            description: "List directory entries inside CToolBaseScope.",
         }
     }
 

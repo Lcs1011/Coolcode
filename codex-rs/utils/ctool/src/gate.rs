@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use crate::context::CToolContext;
 use crate::error::CToolError;
 use crate::error::CToolResult;
-use crate::scope::CToolScope;
+use crate::scope::CToolBaseScope;
 
 pub fn ensure_read_allowed(ctx: &CToolContext, path: &Path) -> CToolResult<()> {
     ensure_existing_path_allowed(ctx, path, "read")
@@ -28,11 +28,11 @@ fn ensure_existing_path_allowed(
     operation: &'static str,
 ) -> CToolResult<()> {
     match ctx.scope {
-        CToolScope::None => Err(CToolError::ScopeDenied {
+        CToolBaseScope::None => Err(CToolError::ScopeDenied {
             scope: ctx.scope,
             operation,
         }),
-        CToolScope::Workspace => {
+        CToolBaseScope::Workspace => {
             let path = canonicalize_existing_path(path, operation)?;
 
             let is_allowed = ctx
@@ -50,7 +50,7 @@ fn ensure_existing_path_allowed(
                 })
             }
         }
-        CToolScope::SelectedOnly | CToolScope::TheEyeofProvidence => {
+        CToolBaseScope::SelectedOnly | CToolBaseScope::TheEyeofProvidence => {
             Err(CToolError::UnsupportedScope {
                 scope: ctx.scope,
                 operation,

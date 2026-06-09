@@ -56,7 +56,7 @@ impl CTool for CToolRgSearch {
     fn spec(&self) -> CToolSpec {
         CToolSpec {
             name: CTOOL_RG_SEARCH_TOOL_NAME,
-            description: "Search UTF-8 text files inside CToolScope using a literal query.",
+            description: "Search UTF-8 text files inside CToolBaseScope using a literal query.",
         }
     }
 

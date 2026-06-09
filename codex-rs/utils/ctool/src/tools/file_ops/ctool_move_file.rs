@@ -35,7 +35,7 @@ impl CTool for CToolMoveFile {
     fn spec(&self) -> CToolSpec {
         CToolSpec {
             name: CTOOL_MOVE_FILE_TOOL_NAME,
-            description: "Move or rename one file inside CToolScope. Directories are never moved.",
+            description: "Move or rename one file inside CToolBaseScope. Directories are never moved.",
         }
     }
 

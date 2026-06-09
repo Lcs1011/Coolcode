@@ -1,17 +1,17 @@
 use std::fmt;
 
-use crate::scope::CToolScope;
+use crate::scope::CToolBaseScope;
 
 pub type CToolResult<T> = Result<T, CToolError>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CToolError {
     ScopeDenied {
-        scope: CToolScope,
+        scope: CToolBaseScope,
         operation: &'static str,
     },
     UnsupportedScope {
-        scope: CToolScope,
+        scope: CToolBaseScope,
         operation: &'static str,
     },
     OutOfScope {
@@ -30,10 +30,10 @@ impl fmt::Display for CToolError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             CToolError::ScopeDenied { scope, operation } => {
-                write!(f, "CTool {operation} denied by CToolScope: {scope}")
+                write!(f, "CTool {operation} denied by CToolBaseScope: {scope}")
             }
             CToolError::UnsupportedScope { scope, operation } => {
-                write!(f, "CTool {operation} does not support CToolScope: {scope}")
+                write!(f, "CTool {operation} does not support CToolBaseScope: {scope}")
             }
             CToolError::OutOfScope { path, operation } => {
                 write!(

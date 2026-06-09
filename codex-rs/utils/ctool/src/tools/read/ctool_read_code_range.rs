@@ -37,7 +37,7 @@ impl CTool for CToolReadCodeRange {
     fn spec(&self) -> CToolSpec {
         CToolSpec {
             name: CTOOL_READ_CODE_RANGE_TOOL_NAME,
-            description: "Read a specific inclusive line range from a UTF-8 text file inside CToolScope.",
+            description: "Read a specific inclusive line range from a UTF-8 text file inside CToolBaseScope.",
         }
     }
 

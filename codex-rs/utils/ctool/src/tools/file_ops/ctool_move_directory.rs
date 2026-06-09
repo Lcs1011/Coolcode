@@ -33,7 +33,7 @@ impl CTool for CToolMoveDirectory {
     fn spec(&self) -> CToolSpec {
         CToolSpec {
             name: CTOOL_MOVE_DIRECTORY_TOOL_NAME,
-            description: "Move or rename one directory inside CToolScope. Overwrite is never allowed.",
+            description: "Move or rename one directory inside CToolBaseScope. Overwrite is never allowed.",
         }
     }
 

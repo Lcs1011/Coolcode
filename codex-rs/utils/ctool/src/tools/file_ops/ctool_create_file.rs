@@ -37,7 +37,7 @@ impl CTool for CToolCreateFile {
     fn spec(&self) -> CToolSpec {
         CToolSpec {
             name: CTOOL_CREATE_FILE_TOOL_NAME,
-            description: "Create a safe UTF-8 text/source file inside CToolScope.",
+            description: "Create a safe UTF-8 text/source file inside CToolBaseScope.",
         }
     }
 

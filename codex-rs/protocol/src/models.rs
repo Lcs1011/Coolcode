@@ -378,7 +378,7 @@ impl PermissionProfile {
     /// Managed empty filesystem access with restricted network access.
     ///
     /// CoolReadWrite does not grant Codex native tools any direct capability.
-    /// CTool access is granted separately by the CTool adapter and CToolScope.
+    /// CTool access is granted separately by the CTool adapter and CToolBaseScope.
     pub fn cool_read_write() -> Self {
         Self::Managed {
             file_system: ManagedFileSystemPermissions::Restricted {

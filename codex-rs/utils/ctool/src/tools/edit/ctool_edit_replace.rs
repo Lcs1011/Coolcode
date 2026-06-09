@@ -34,7 +34,7 @@ impl CTool for CToolEditReplace {
     fn spec(&self) -> CToolSpec {
         CToolSpec {
             name: CTOOL_EDIT_REPLACE_TOOL_NAME,
-            description: "Replace one exact text occurrence in a UTF-8 file inside CToolScope.",
+            description: "Replace one exact text occurrence in a UTF-8 file inside CToolBaseScope.",
         }
     }
 

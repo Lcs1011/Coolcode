@@ -31,7 +31,7 @@ impl CTool for CToolDeleteDirectory {
     fn spec(&self) -> CToolSpec {
         CToolSpec {
             name: CTOOL_DELETE_DIRECTORY_TOOL_NAME,
-            description: "Delete one empty directory inside CToolScope. Recursive deletion is never allowed.",
+            description: "Delete one empty directory inside CToolBaseScope. Recursive deletion is never allowed.",
         }
     }
 

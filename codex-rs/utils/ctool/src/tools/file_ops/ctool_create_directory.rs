@@ -30,7 +30,7 @@ impl CTool for CToolCreateDirectory {
     fn spec(&self) -> CToolSpec {
         CToolSpec {
             name: CTOOL_CREATE_DIRECTORY_TOOL_NAME,
-            description: "Create one directory inside CToolScope. Parent directory must already exist.",
+            description: "Create one directory inside CToolBaseScope. Parent directory must already exist.",
         }
     }
 

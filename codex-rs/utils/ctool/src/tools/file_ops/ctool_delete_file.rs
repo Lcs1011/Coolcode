@@ -33,7 +33,7 @@ impl CTool for CToolDeleteFile {
     fn spec(&self) -> CToolSpec {
         CToolSpec {
             name: CTOOL_DELETE_FILE_TOOL_NAME,
-            description: "Delete one file inside CToolScope. Directories are never deleted.",
+            description: "Delete one file inside CToolBaseScope. Directories are never deleted.",
         }
     }
 

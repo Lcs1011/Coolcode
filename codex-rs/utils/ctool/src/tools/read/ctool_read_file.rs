@@ -36,7 +36,7 @@ impl CTool for CToolReadFile {
     fn spec(&self) -> CToolSpec {
         CToolSpec {
             name: CTOOL_READ_FILE_TOOL_NAME,
-            description: "Read a small UTF-8 text file inside CToolScope.",
+            description: "Read a small UTF-8 text file inside CToolBaseScope.",
         }
     }
 

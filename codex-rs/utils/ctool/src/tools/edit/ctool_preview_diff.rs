@@ -51,7 +51,7 @@ impl CTool for CToolPreviewDiff {
     fn spec(&self) -> CToolSpec {
         CToolSpec {
             name: CTOOL_PREVIEW_DIFF_TOOL_NAME,
-            description: "Preview replace/insert edits for one UTF-8 file inside CToolScope without writing.",
+            description: "Preview replace/insert edits for one UTF-8 file inside CToolBaseScope without writing.",
         }
     }
 

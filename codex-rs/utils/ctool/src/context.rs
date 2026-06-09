@@ -1,17 +1,17 @@
 use std::path::PathBuf;
 
-use crate::scope::CToolScope;
+use crate::scope::CToolBaseScope;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CToolContext {
-    pub scope: CToolScope,
+    pub scope: CToolBaseScope,
     pub workspace_roots: Vec<PathBuf>,
     pub selected_paths: Vec<PathBuf>,
 }
 
 impl CToolContext {
     pub fn new(
-        scope: CToolScope,
+        scope: CToolBaseScope,
         workspace_roots: Vec<PathBuf>,
         selected_paths: Vec<PathBuf>,
     ) -> Self {
@@ -24,7 +24,7 @@ impl CToolContext {
 
     pub fn workspace(workspace_roots: Vec<PathBuf>) -> Self {
         Self {
-            scope: CToolScope::Workspace,
+            scope: CToolBaseScope::Workspace,
             workspace_roots,
             selected_paths: Vec::new(),
         }
@@ -32,7 +32,7 @@ impl CToolContext {
 
     pub fn none() -> Self {
         Self {
-            scope: CToolScope::None,
+            scope: CToolBaseScope::None,
             workspace_roots: Vec::new(),
             selected_paths: Vec::new(),
         }

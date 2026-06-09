@@ -117,7 +117,7 @@ fn ctool_description(name: &str, base_description: &str) -> String {
   "include_hidden": false
 }
 
-Use this to inspect project structure inside CToolScope."#
+Use this to inspect project structure inside CToolBaseScope."#
         }
         "ctool_rg_search" => {
             r#"Input JSON:
@@ -130,7 +130,7 @@ Use this to inspect project structure inside CToolScope."#
   "include_hidden": false
 }
 
-Use this to search UTF-8 text files by literal substring inside CToolScope."#
+Use this to search UTF-8 text files by literal substring inside CToolBaseScope."#
         }
         "ctool_read_code_range" => {
             r#"Input JSON:

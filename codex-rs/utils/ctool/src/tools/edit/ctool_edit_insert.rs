@@ -38,7 +38,7 @@ impl CTool for CToolEditInsert {
     fn spec(&self) -> CToolSpec {
         CToolSpec {
             name: CTOOL_EDIT_INSERT_TOOL_NAME,
-            description: "Insert text after a specific line in a UTF-8 file inside CToolScope.",
+            description: "Insert text after a specific line in a UTF-8 file inside CToolBaseScope.",
         }
     }
 
