@@ -3,7 +3,6 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::command_request::CToolCommandApproval;
-use crate::command_request::CToolCommandExecutionReport;
 use crate::command_request::CToolCommandRisk;
 use crate::command_request::build_command_request_preview;
 use crate::command_request::execute_approved_command_request;

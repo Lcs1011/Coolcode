@@ -251,14 +251,6 @@ pub fn classify_command(
         };
     }
 
-    if let Some(rule) = first_prefix_match(&normalized_command, &config.yellow_prefixes) {
-        return CToolCommandClassification {
-            command: raw_command,
-            risk: CToolCommandRisk::Yellow,
-            reason: format!("matched yellow prefix rule: {rule}"),
-        };
-    }
-
     if let Some(rule) = first_exact_match(&normalized_command, &config.green_exact_commands) {
         return CToolCommandClassification {
             command: raw_command,
@@ -272,6 +264,14 @@ pub fn classify_command(
             command: raw_command,
             risk: CToolCommandRisk::Green,
             reason: format!("matched green prefix rule: {rule}"),
+        };
+    }
+
+    if let Some(rule) = first_prefix_match(&normalized_command, &config.yellow_prefixes) {
+        return CToolCommandClassification {
+            command: raw_command,
+            risk: CToolCommandRisk::Yellow,
+            reason: format!("matched yellow prefix rule: {rule}"),
         };
     }
 
@@ -369,7 +369,7 @@ pub fn render_command_request_banner(preview: &CToolCommandRequestPreview) -> St
         }
         CToolCommandApproval::ConfirmTwice => {
             text.push_str("First confirm? Type Y:\n");
-            text.push_str("Second confirm? Type RUN RED:\n");
+            text.push_str("🔴 RED Second confirm? Type Y:\n");
         }
     }
     text.push_str("==============================");
@@ -590,7 +590,7 @@ pub fn parse_red_first_confirmation_input(input: &str) -> CToolCommandUserDecisi
 pub fn parse_red_second_confirmation_input(input: &str) -> CToolCommandUserDecision {
     let trimmed = input.trim();
 
-    if trimmed == "RUN RED" {
+    if starts_with_yes(trimmed) {
         CToolCommandUserDecision::Approved
     } else {
         CToolCommandUserDecision::Rejected {
@@ -827,15 +827,15 @@ mod tests {
     }
 
     #[test]
-    fn red_second_confirmation_requires_run_red_exactly() {
-        let approved = parse_red_second_confirmation_input("RUN RED");
-        let rejected = parse_red_second_confirmation_input("Y");
+    fn red_second_confirmation_accepts_y_prefix() {
+        let approved = parse_red_second_confirmation_input("Y");
+        let rejected = parse_red_second_confirmation_input("N too risky");
 
         assert_eq!(approved, CToolCommandUserDecision::Approved);
         assert_eq!(
             rejected,
             CToolCommandUserDecision::Rejected {
-                feedback: Some("Y".to_string())
+                feedback: Some("too risky".to_string())
             }
         );
     }

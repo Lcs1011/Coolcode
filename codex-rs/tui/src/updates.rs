@@ -1,4 +1,4 @@
-#![cfg(not(debug_assertions))]
+﻿#![cfg(not(debug_assertions))]
 
 use crate::legacy_core::config::Config;
 use crate::npm_registry;
@@ -11,7 +11,7 @@ use crate::update_versions::is_source_build_version;
 use chrono::DateTime;
 use chrono::Duration;
 use chrono::Utc;
-use codex_login::default_client::create_client;
+use reqwest::Client;
 use codex_utils_safety::safe_network;
 use codex_utils_safety::safe_network::NetworkPurpose;
 use serde::Deserialize;
@@ -35,7 +35,7 @@ pub fn get_upgrade_version(config: &Config) -> Option<String> {
         Some(info) => info.last_checked_at < Utc::now() - Duration::hours(20),
     } {
         // Refresh the cached latest version in the background so TUI startup
-        // isn’t blocked by a network call. The UI reads the previously cached
+        // isnâ€™t blocked by a network call. The UI reads the previously cached
         // value (if any) for this run; the next run shows the banner if needed.
         tokio::spawn(async move {
             check_for_update(&version_file, action)
@@ -67,6 +67,10 @@ const VERSION_FILENAME: &str = "version.json";
 const HOMEBREW_CASK_API_URL: &str = "https://formulae.brew.sh/api/cask/codex.json";
 const LATEST_RELEASE_URL: &str = "https://api.github.com/repos/openai/codex/releases/latest";
 
+fn create_update_client() -> Client {
+    Client::new()
+}
+
 #[derive(Deserialize, Debug, Clone)]
 struct ReleaseInfo {
     tag_name: String,
@@ -91,7 +95,7 @@ async fn check_for_update(version_file: &Path, action: Option<UpdateAction>) -> 
         Some(UpdateAction::BrewUpgrade) => {
             let HomebrewCaskInfo { version } = safe_network::send(
                 NetworkPurpose::Other,
-                create_client().get(HOMEBREW_CASK_API_URL),
+                create_update_client().get(HOMEBREW_CASK_API_URL),
             )
             .await?
             .error_for_status()?
@@ -103,7 +107,7 @@ async fn check_for_update(version_file: &Path, action: Option<UpdateAction>) -> 
             let latest_version = fetch_latest_github_release_version().await?;
             let package_info = safe_network::send(
                 NetworkPurpose::Other,
-                create_client().get(npm_registry::PACKAGE_URL),
+                create_update_client().get(npm_registry::PACKAGE_URL),
             )
             .await?
             .error_for_status()?
@@ -138,7 +142,7 @@ async fn fetch_latest_github_release_version() -> anyhow::Result<String> {
         tag_name: latest_tag_name,
     } = safe_network::send(
         NetworkPurpose::Other,
-        create_client().get(LATEST_RELEASE_URL),
+        create_update_client().get(LATEST_RELEASE_URL),
     )
     .await?
     .error_for_status()?
@@ -181,3 +185,5 @@ pub async fn dismiss_version(config: &Config, version: &str) -> anyhow::Result<(
     tokio::fs::write(version_file, json_line).await?;
     Ok(())
 }
+
+
