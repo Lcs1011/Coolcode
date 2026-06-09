@@ -6,6 +6,7 @@ use crate::tools::context::ToolInvocation;
 use crate::tools::handlers::ApplyPatchHandler;
 use crate::tools::handlers::CodeModeExecuteHandler;
 use crate::tools::handlers::CodeModeWaitHandler;
+use crate::tools::handlers::CToolHandler;
 use crate::tools::handlers::DynamicToolHandler;
 use crate::tools::handlers::ExecCommandHandler;
 use crate::tools::handlers::ExecCommandHandlerOptions;
@@ -161,7 +162,12 @@ fn build_tool_specs_and_registry(
     turn_context: &TurnContext,
     params: ToolRouterParams<'_>,
 ) -> (Vec<ToolSpec>, ToolRegistry) {
-    if turn_context.config.safe_mode || cool_read_write_profile_enabled(turn_context) {
+    if cool_read_write_profile_enabled(turn_context) {
+        let _ = params;
+        return build_ctool_specs_and_registry(turn_context);
+    }
+
+    if turn_context.config.safe_mode {
         let _ = params;
         return (
             Vec::new(),
@@ -200,6 +206,16 @@ fn cool_read_write_profile_enabled(turn_context: &TurnContext) -> bool {
         .permissions
         .active_permission_profile()
         .is_some_and(|profile| profile.id == BUILT_IN_PERMISSION_PROFILE_COOL_READ_WRITE)
+}
+
+fn build_ctool_specs_and_registry(turn_context: &TurnContext) -> (Vec<ToolSpec>, ToolRegistry) {
+    let mut planned_tools = PlannedTools::default();
+
+    for spec in ctool::registry::available_specs() {
+        planned_tools.add(CToolHandler::new(spec.name, spec.description));
+    }
+
+    build_model_visible_specs_and_registry(turn_context, planned_tools)
 }
 
 fn build_model_visible_specs_and_registry(
