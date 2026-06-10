@@ -1,236 +1,143 @@
-任务：修复 ctool_command_request 的显示问题。
+任务：寻找并关闭 `.codex` 自动生成 / 自动加载逻辑。
 
 背景：
-现在 ctool_command_request 已经可以把 git status 识别为 GREEN，并且可以自动执行、写入 .coolcache\command_request\YYYY-MM-DD\。
-但是用户界面里没有稳定显示大横幅。模型只是总结了一句：
-“已通过 ctool_command_request 申请并执行 git status。”
-这不符合产品设计。
 
-产品要求：
-即使是 GREEN 命令，不需要用户确认，也必须非常醒目地显示 COMMAND REQUEST 大横幅。
-ctool_command_request 调用后，模型必须能直接拿到一个完整的 display_text，并原样贴给用户。
+当前项目根目录是：
 
-本次只修显示，不改变安全逻辑：
+`C:\CodexLab\codex`
 
-1. 不要让 Yellow / Red 执行。
-2. 不要改 SafeMode。
-3. 不要改 Scope。
-4. 不要改命令分类规则。
-5. 不要新增联网功能。
-6. 不要恢复原生 shell。
-7. 只改 ctool_command_request 的输出展示和工具说明。
+当前 Codex 启动后，项目根目录下存在一个：
 
-需要修改的文件：
+`.codex`
 
-1. utils/ctool/src/tools/command/ctool_command_request.rs
-2. core/src/tools/handlers/ctool_adapter.rs
+它内部结构大致是：
 
-第一步：修改 ctool_command_request.rs
+`.codex\environments\environment.toml`  
+`.codex\environments\setup.py`  
+`.codex\skills\...\SKILL.md`  
+`.codex\skills\...\agents\openai.yaml`  
+`.codex\skills\...\scripts\*.py`
 
-打开：
-utils/ctool/src/tools/command/ctool_command_request.rs
+这些文件不是我们 CoolCode 主线需要的功能。我们不希望 Codex 在启动时自动生成、自动加载、自动执行 `.codex` 里的任何内容。
 
-找到结构体：
+核心目标：
 
-pub struct CToolCommandRequestOutput {
-    pub will_execute: bool;
-    pub executed: bool;
-    pub all_success: Option<bool>;
-    pub result_file: Option<String>;
-    pub log_file: Option<String>;
-    ...
-    pub banner: String;
-    pub note: String;
-}
+找到源码中是否存在以下逻辑：
 
-实际代码里是逗号，不是分号。请按实际代码修改。
+1. 启动时检查 LaunchDir 下是否存在 `.codex`。
 
-在 output 结构体里新增字段：
+2. 如果 `.codex` 不存在，就自动创建 `.codex`。
 
-pub display_text: String,
+3. 自动写入 `.codex\environments` 或 `.codex\skills`。
 
-建议放在 banner 前面：
+4. 自动加载 `.codex\skills\**\SKILL.md`。
 
-pub commands: Vec<CToolCommandRequestCommandOutput>,
+5. 自动读取 `.codex\skills\**\agents\openai.yaml`。
 
-pub display_text: String,
-pub banner: String,
-pub note: String,
+6. 自动执行 `.codex\environments\setup.py` 或 `.codex\skills\**\scripts\*.py`。
 
-第二步：在 preview_command_request 里生成 display_text
+7. 任何与 `/skills`、skills registry、skills bootstrap、environment setup 有关的启动流程。
 
-在 preview_command_request(...) 函数中，现在已经有：
+第一阶段：只分析，不修改。
 
-let banner = render_command_request_banner(&preview);
+请全仓库搜索以下关键词：
 
-后面有：
+`.codex`  
+`SKILL.md`  
+`openai.yaml`  
+`setup.py`  
+`skills`  
+`environments`  
+`babysit-pr`  
+`codex-issue-digest`  
+`collect_issue_digest`  
+`gh_pr_watch`  
+`include_dir`  
+`include_str`  
+`include_bytes`  
+`create_dir_all`  
+`std::fs::write`  
+`write_all`  
+`copy`  
+`copy_dir`  
+`bootstrap`  
+`skill`  
+`Skill`  
+`skills_dir`  
+`environment.toml`
 
-let mut executed = false;
-let mut all_success = None;
-let mut result_file = None;
-let mut log_file = None;
-let mut note = ...
+重点检查这些目录：
 
-然后 Green 会执行，并填充 result_file / log_file。
+`codex-rs\cli`  
+`codex-rs\tui`  
+`codex-rs\core`  
+`codex-rs\app-server`  
+`codex-rs\codex-cli`  
+`codex-rs\codex-login`  
+`codex-rs\utils`
 
-请在构造 Ok(CToolCommandRequestOutput { ... }) 之前，增加：
+允许使用的方式：
 
-let display_text = render_command_request_display_text(
-    &banner,
-    executed,
-    all_success,
-    result_file.as_deref(),
-    log_file.as_deref(),
-    &note,
-);
+优先使用 CTool 的代码搜索/读取工具。  
+如果必须申请命令，只允许申请 `rg` 搜索命令。  
+不要申请 `python`、`powershell`、`cmd`、`curl`、`wget`、`git clone`。  
+不要执行 `.codex` 里的任何 `.py` 文件。  
+不要运行 `.codex` 里的任何脚本。  
+不要删除、移动、重命名 `.codex`。
 
-注意：
-result_file / log_file 后面还要放进输出结构体，所以这里必须用 as_deref()，不要 move 掉 Option<String>。
+第一阶段输出要求：
 
-第三步：增加 helper 函数
+请输出：
 
-在 ctool_command_request.rs 末尾，approval_label(...) 后面，添加：
+1. 所有相关命中的文件路径和行号。
 
-fn render_command_request_display_text(
-    banner: &str,
-    executed: bool,
-    all_success: Option<bool>,
-    result_file: Option<&str>,
-    log_file: Option<&str>,
-    note: &str,
-) -> String {
-    let mut text = String::new();
+2. 判断是否存在 `.codex` 自动生成逻辑。
 
-    text.push_str(banner);
-    text.push_str("\n\n");
-    text.push_str("COMMAND REQUEST RESULT\n");
-    text.push_str("==============================\n");
-    text.push_str(&format!("executed: {executed}\n"));
-    
-    if let Some(all_success) = all_success {
-        text.push_str(&format!("all_success: {all_success}\n"));
-    }
-    
-    if let Some(result_file) = result_file {
-        text.push_str("result_file: ");
-        text.push_str(result_file);
-        text.push('\n');
-    }
-    
-    if let Some(log_file) = log_file {
-        text.push_str("log_file: ");
-        text.push_str(log_file);
-        text.push('\n');
-    }
-    
-    text.push_str("note: ");
-    text.push_str(note);
-    text.push('\n');
-    text.push_str("==============================");
-    
-    text
+3. 判断是否存在 `.codex\skills` 自动加载逻辑。
 
-}
+4. 判断是否存在 `.py` 自动执行逻辑。
 
-第四步：把 display_text 放入输出
+5. 如果没有找到，也要明确说明“没有在当前源码中找到明确入口”。
 
-在 Ok(CToolCommandRequestOutput { ... }) 里加入：
+6. 如果找到入口，请先说明准备如何关闭，不要立刻修改。
 
-display_text,
+第二阶段：在我确认后再修改。
 
-位置建议：
+如果找到明确入口，修改目标是：
 
-commands,
+在 SafeMode ON 且 PermissionProfile 为 CoolReadWrite 时：
 
-display_text,
-banner,
-note,
+1. 不生成 `.codex`。
 
-第五步：更新 CToolCommandRequest::spec() 的 description
+2. 不加载 LaunchDir 下的 `.codex\skills`。
 
-当前 description 可能还说：
-“but does not execute commands.”
+3. 不读取 `.codex\skills\**\agents\openai.yaml`。
 
-请改成准确描述：
+4. 不执行 `.codex\environments\setup.py`。
 
-"Preview a controlled command execution request. It classifies command risk and renders the required approval banner. GREEN commands may auto-execute only when allowed by the user's whitelist; YELLOW and RED commands are not executed yet."
+5. 不执行 `.codex\skills\**\scripts\*.py`。
 
-第六步：修改 core/src/tools/handlers/ctool_adapter.rs
+6. 如果用户输入 `/skills`，应显示 disabled by CoolReadWrite 或类似说明，而不是加载 `.codex`。
 
-打开：
-core/src/tools/handlers/ctool_adapter.rs
+修改要求：
 
-找到 ctool_command_request 的说明分支。
+只修改必要的 Rust 源码。  
+不要修改 `.codex` 目录内容。  
+不要删除 `.codex`。  
+不要新增联网能力。  
+不要新增 Python 执行能力。  
+不要改 CTool 读写工具。  
+不要改 ctool_command_request 的风险规则。  
+不要破坏 SafeMode 默认开启逻辑。
 
-把里面不准确的句子改掉。
-
-重点要加入这几条硬规则：
-
-1. After calling this tool, always paste output.display_text verbatim to the user.
-2. Do not summarize display_text.
-3. Do not omit the COMMAND REQUEST banner.
-4. GREEN commands may auto-execute only when allowed by the user's whitelist.
-5. YELLOW and RED commands never execute in this version.
-6. If result_file or log_file exists, show them as part of output.display_text.
-
-建议把 ctool_command_request 的说明整体调整为类似：
-
-Input JSON:
-{
-  "commands": [
-    "cargo check -p ctool",
-    "cargo check -p codex-core"
-  ],
-  "ai_risk_upgrade": null,
-  "reason": "Need compile errors after code changes."
-}
-
-Use this only when normal CTool file tools cannot complete the task.
-
-This is a controlled command request tool.
-It classifies every command as GREEN / YELLOW / RED, computes the highest batch risk,
-renders a very visible COMMAND REQUEST banner, and reports whether execution happened.
-
-Important display rule:
-After every call, paste output.display_text verbatim to the user.
-Do not summarize it.
-Do not omit the COMMAND REQUEST banner.
-
-Rules:
-
-- Prefer normal CTool read/edit/file tools.
-- List every command completely.
-- Unknown commands are RED.
-- Downloads and opening websites are RED.
-- AI may upgrade risk, but cannot downgrade risk.
-- GREEN commands may auto-execute only when allowed by the user's whitelist.
-- YELLOW and RED commands never execute in this version.
-
-第七步：检查
-
-完成修改后，请不要运行任意 shell 命令。
-你当前没有实际命令执行权限。
-
-你只需要告诉用户：
+最终修改后，请告诉我：
 
 1. 修改了哪些文件。
-2. display_text 字段已经加入。
-3. ctool_command_request 的工具说明已经要求原样贴出 display_text。
-4. 建议用户在外部 CMD 执行以下检查：
 
-cd /d C:\CodexLab\codex\codex-rs
-cargo fmt
-cargo test -p ctool
-cargo check -p ctool
-cargo check -p codex-core
-cargo build --release --bin codex
+2. 每个文件为什么要改。
 
-第八步：不要做的事
+3. 哪个函数是入口。
 
-不要实现 Yellow / Red 确认执行。
-不要实现 TUI PendingCommandRequest。
-不要改 .coolconfig.toml。
-不要改 .coolsystemconfig.toml。
-不要改 SafeMode。
-不要改 CToolScope。
-不要改其他工具。
+4. 新逻辑如何保证 `.codex` 不会生成/加载/执行。
+
+5. 外部需要运行哪些验证命令。

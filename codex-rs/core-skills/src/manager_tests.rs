@@ -455,6 +455,67 @@ async fn skills_for_cwd_loads_repo_and_user_roots_with_local_fs() {
 }
 
 #[tokio::test]
+async fn safe_mode_skips_skill_roots_and_system_skill_install() {
+    let codex_home = tempfile::tempdir().expect("tempdir");
+    let cwd = tempfile::tempdir().expect("tempdir");
+    let repo_dot_codex = cwd.path().join(".codex");
+    fs::create_dir_all(&repo_dot_codex).expect("create repo config dir");
+
+    write_user_skill(&codex_home, "user", "user-skill", "from local user root");
+    let repo_skill_dir = repo_dot_codex.join("skills/repo");
+    fs::create_dir_all(&repo_skill_dir).expect("create repo skill dir");
+    fs::write(
+        repo_skill_dir.join("SKILL.md"),
+        "---\nname: repo-skill\ndescription: from repo root\n---\n\n# Body\n",
+    )
+    .expect("write repo skill");
+
+    let config_layer_stack = ConfigLayerStack::new(
+        vec![
+            user_config_layer(&codex_home, ""),
+            ConfigLayerEntry::new(
+                ConfigLayerSource::Project {
+                    dot_codex_folder: repo_dot_codex.abs(),
+                },
+                toml::Value::Table(toml::map::Map::new()),
+            ),
+        ],
+        Default::default(),
+        ConfigRequirementsToml::default(),
+    )
+    .expect("valid config layer stack");
+    let skills_input = SkillsLoadInput::new(
+        cwd.path().abs(),
+        Vec::new(),
+        config_layer_stack.clone(),
+        bundled_skills_enabled_from_stack(&config_layer_stack),
+    );
+    let skills_manager = SkillsManager::new_with_restriction_product_and_safe_mode(
+        codex_home.path().abs(),
+        /*bundled_skills_enabled*/ true,
+        Some(Product::Codex),
+        /*safe_mode*/ true,
+    );
+
+    let outcome = skills_manager
+        .skills_for_cwd(
+            &skills_input,
+            /*force_reload*/ true,
+            Some(Arc::clone(&LOCAL_FS)),
+        )
+        .await;
+
+    assert_eq!(outcome.skills, Vec::new());
+    assert!(
+        skills_manager
+            .skill_roots_for_config(&skills_input, Some(Arc::clone(&LOCAL_FS)))
+            .await
+            .is_empty()
+    );
+    assert!(!codex_home.path().join("skills/.system").exists());
+}
+
+#[tokio::test]
 async fn skills_for_cwd_without_fs_skips_repo_roots() {
     let codex_home = tempfile::tempdir().expect("tempdir");
     let cwd = tempfile::tempdir().expect("tempdir");

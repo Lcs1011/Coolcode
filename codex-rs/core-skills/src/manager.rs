@@ -51,6 +51,7 @@ impl SkillsLoadInput {
 pub struct SkillsManager {
     codex_home: AbsolutePathBuf,
     restriction_product: Option<Product>,
+    safe_mode: bool,
     extra_roots: RwLock<Vec<AbsolutePathBuf>>,
     cache_by_cwd: RwLock<HashMap<AbsolutePathBuf, SkillLoadOutcome>>,
     cache_by_config: RwLock<HashMap<ConfigSkillsCacheKey, SkillLoadOutcome>>,
@@ -83,6 +84,7 @@ impl SkillsManager {
         let manager = Self {
             codex_home,
             restriction_product,
+            safe_mode,
             extra_roots: RwLock::new(Vec::new()),
             cache_by_cwd: RwLock::new(HashMap::new()),
             cache_by_config: RwLock::new(HashMap::new()),
@@ -121,6 +123,10 @@ impl SkillsManager {
         input: &SkillsLoadInput,
         fs: Option<Arc<dyn ExecutorFileSystem>>,
     ) -> SkillLoadOutcome {
+        if self.safe_mode {
+            return SkillLoadOutcome::default();
+        }
+
         let roots = self.skill_roots_for_config(input, fs).await;
         let skill_config_rules = skill_config_rules_from_stack(&input.config_layer_stack);
         let cache_key = config_skills_cache_key(&roots, &skill_config_rules);
@@ -142,6 +148,10 @@ impl SkillsManager {
         input: &SkillsLoadInput,
         fs: Option<Arc<dyn ExecutorFileSystem>>,
     ) -> Vec<SkillRoot> {
+        if self.safe_mode {
+            return Vec::new();
+        }
+
         let mut roots = skill_roots(
             fs,
             &input.config_layer_stack,
@@ -162,6 +172,10 @@ impl SkillsManager {
         force_reload: bool,
         fs: Option<Arc<dyn ExecutorFileSystem>>,
     ) -> SkillLoadOutcome {
+        if self.safe_mode {
+            return SkillLoadOutcome::default();
+        }
+
         let use_cwd_cache = fs.is_some();
         if use_cwd_cache
             && !force_reload
