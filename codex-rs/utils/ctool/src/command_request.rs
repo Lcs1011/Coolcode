@@ -10,6 +10,10 @@ use serde::Serialize;
 
 use crate::error::CToolError;
 use crate::error::CToolResult;
+#[cfg(test)]
+#[path = "command_request_tests.rs"]
+mod tests;
+
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -26,7 +30,7 @@ impl CToolCommandRisk {
             CToolCommandRisk::Green => "🟢",
             CToolCommandRisk::Yellow => "🟡",
             CToolCommandRisk::Red => "🔴",
-            CToolCommandRisk::Blocked => "⛔",
+            CToolCommandRisk::Blocked => "🔴🔴🔴",
         }
     }
 
@@ -170,6 +174,7 @@ impl Default for CToolCommandConfig {
                 "mamba install".to_string(),
                 "micromamba create".to_string(),
                 "micromamba install".to_string(),
+                "pyenv install".to_string(),
                 "winget install python".to_string(),
                 "choco install python".to_string(),
                 "scoop install python".to_string(),
@@ -197,6 +202,11 @@ impl Default for CToolCommandConfig {
                 "windowsapps\\python".to_string(),
                 "setx path".to_string(),
                 "set path".to_string(),
+                "$env:path".to_string(),
+                "path=".to_string(),
+                "scripts\\activate".to_string(),
+                "activate.bat".to_string(),
+                "activate.ps1".to_string(),
             ],
         }
     }
@@ -226,6 +236,21 @@ pub struct CToolCommandExecutionReport {
     pub result_file: String,
     pub log_file: String,
     pub commands: Vec<CToolCommandExecutionItem>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CToolCommandRequestRecordStatus {
+    Blocked,
+    Rejected,
+}
+
+impl CToolCommandRequestRecordStatus {
+    fn label(self) -> &'static str {
+        match self {
+            CToolCommandRequestRecordStatus::Blocked => "Blocked",
+            CToolCommandRequestRecordStatus::Rejected => "Rejected",
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -451,7 +476,7 @@ pub fn render_command_request_banner(preview: &CToolCommandRequestPreview) -> St
             text.push_str("Confirm twice: provide two separate Y/y confirmations to execute.\n");
         }
         CToolCommandApproval::Blocked => {
-            text.push_str("Blocked: this command is forbidden by Cool system policy.\n");
+            text.push_str("Blocked: hard policy\n");
             text.push_str("No confirmation is allowed.\n");
             text.push_str("It will never be executed.\n");
         }
@@ -537,7 +562,15 @@ pub fn execute_approved_command_request(
     }
 
     std::fs::write(&result_path, result_text)?;
-    append_command_request_log(&log_path, preview, &result_path, all_success)?;
+    append_command_request_log(
+        &log_path,
+        preview,
+        &result_path,
+        /*approved*/ true,
+        /*all_success*/ Some(all_success),
+        /*status*/ None,
+        /*user_feedback*/ None,
+    )?;
 
     Ok(CToolCommandExecutionReport {
         executed: true,
@@ -545,6 +578,74 @@ pub fn execute_approved_command_request(
         result_file: result_path.display().to_string(),
         log_file: log_path.display().to_string(),
         commands: items,
+    })
+}
+
+pub fn record_unexecuted_command_request(
+    current_dir: impl AsRef<Path>,
+    cache_root: impl AsRef<Path>,
+    preview: &CToolCommandRequestPreview,
+    status: CToolCommandRequestRecordStatus,
+    note: &str,
+    user_feedback: Option<&str>,
+) -> CToolResult<CToolCommandExecutionReport> {
+    let current_dir = current_dir.as_ref();
+    let cache_dir = command_request_cache_dir(cache_root.as_ref());
+    std::fs::create_dir_all(&cache_dir)?;
+
+    let index = next_command_request_index(&cache_dir)?;
+    let result_file_name = format!(
+        "{index:05}_{}_command_request.md",
+        status.label().to_ascii_lowercase()
+    );
+    let result_path = cache_dir.join(result_file_name);
+    let log_path = cache_dir.join("request_log.md");
+    let timestamp = Local::now();
+
+    let mut result_text = String::new();
+    result_text.push_str("# CTool Command Request Result\n\n");
+    result_text.push_str(&format!(
+        "Time: {}\n",
+        timestamp.format("%Y-%m-%d %H:%M:%S")
+    ));
+    result_text.push_str(&format!("Risk: {}\n", preview.final_risk.label()));
+    result_text.push_str("Approved: No\n");
+    result_text.push_str(&format!("Status: {}\n", status.label()));
+    result_text.push_str(&format!("CurrentDir: {}\n\n", current_dir.display()));
+    result_text.push_str("## Note\n\n");
+    result_text.push_str(note);
+    result_text.push_str("\n\n");
+
+    if let Some(user_feedback) = user_feedback {
+        result_text.push_str("## User Feedback\n\n");
+        result_text.push_str(user_feedback);
+        result_text.push_str("\n\n");
+    }
+
+    result_text.push_str("## Commands\n\n");
+    for (index, command) in preview.commands.iter().enumerate() {
+        result_text.push_str(&format!("### {}. `{}`\n\n", index + 1, command.command));
+        result_text.push_str(&format!("Risk: {}\n", command.risk.label()));
+        result_text.push_str(&format!("Reason: {}\n\n", command.reason));
+    }
+
+    std::fs::write(&result_path, result_text)?;
+    append_command_request_log(
+        &log_path,
+        preview,
+        &result_path,
+        /*approved*/ false,
+        /*all_success*/ None,
+        /*status*/ Some(status.label()),
+        user_feedback,
+    )?;
+
+    Ok(CToolCommandExecutionReport {
+        executed: false,
+        all_success: false,
+        result_file: result_path.display().to_string(),
+        log_file: log_path.display().to_string(),
+        commands: Vec::new(),
     })
 }
 
@@ -579,7 +680,10 @@ fn append_command_request_log(
     log_path: &Path,
     preview: &CToolCommandRequestPreview,
     result_path: &Path,
-    all_success: bool,
+    approved: bool,
+    all_success: Option<bool>,
+    status: Option<&str>,
+    user_feedback: Option<&str>,
 ) -> CToolResult<()> {
     let mut file = OpenOptions::new()
         .create(true)
@@ -589,13 +693,23 @@ fn append_command_request_log(
     writeln!(file, "## {}", Local::now().format("%Y-%m-%d %H:%M:%S"))?;
     writeln!(file)?;
     writeln!(file, "Risk: {}", preview.final_risk.label())?;
-    writeln!(file, "Approved: Yes")?;
-    writeln!(file, "AllSuccess: {all_success}")?;
+    writeln!(file, "Approved: {}", if approved { "Yes" } else { "No" })?;
+    if let Some(status) = status {
+        writeln!(file, "Status: {status}")?;
+    }
+    if let Some(all_success) = all_success {
+        writeln!(file, "AllSuccess: {all_success}")?;
+    }
     writeln!(file, "CurrentDir: {}", preview.current_dir)?;
     writeln!(file)?;
     writeln!(file, "Commands:")?;
     for (index, command) in preview.commands.iter().enumerate() {
         writeln!(file, "{}. {}", index + 1, command.command)?;
+    }
+    if let Some(user_feedback) = user_feedback {
+        writeln!(file)?;
+        writeln!(file, "User Feedback:")?;
+        writeln!(file, "{user_feedback}")?;
     }
     writeln!(file)?;
     writeln!(file, "Output:")?;

@@ -1,4 +1,5 @@
 pub mod ctool_annotate_markdown;
+pub mod ctool_tavily_search_request;
 
 pub use ctool_annotate_markdown::CTOOL_ANNOTATE_MARKDOWN_TOOL_NAME;
 pub use ctool_annotate_markdown::CToolAnnotateMarkdown;
@@ -6,3 +7,8 @@ pub use ctool_annotate_markdown::CToolAnnotateMarkdownInput;
 pub use ctool_annotate_markdown::CToolAnnotateMarkdownOutput;
 pub use ctool_annotate_markdown::CToolMarkdownAnnotationDirection;
 pub use ctool_annotate_markdown::CToolMarkdownAnnotationKind;
+pub use ctool_tavily_search_request::CTOOL_TAVILY_SEARCH_REQUEST_TOOL_NAME;
+pub use ctool_tavily_search_request::CToolTavilyAction;
+pub use ctool_tavily_search_request::CToolTavilySearchRequest;
+pub use ctool_tavily_search_request::CToolTavilySearchRequestInput;
+pub use ctool_tavily_search_request::CToolTavilySearchRequestOutput;

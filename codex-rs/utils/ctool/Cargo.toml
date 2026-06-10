@@ -7,6 +7,7 @@ license.workspace = true
 [dependencies]
 chrono = { workspace = true }
 regex = { workspace = true }
+reqwest = { workspace = true, features = ["blocking", "json", "rustls-tls"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 toml = { workspace = true }

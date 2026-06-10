@@ -6,12 +6,14 @@ use serde_json::Value;
 
 use crate::command_request::CToolCommandApproval;
 use crate::command_request::CToolCommandRisk;
+use crate::command_request::CToolCommandRequestRecordStatus;
 use crate::command_request::CToolCommandUserDecision;
 use crate::command_request::build_command_request_preview;
 use crate::command_request::execute_approved_command_request;
 use crate::command_request::parse_red_first_confirmation_input;
 use crate::command_request::parse_red_second_confirmation_input;
 use crate::command_request::parse_yellow_confirmation_input;
+use crate::command_request::record_unexecuted_command_request;
 use crate::command_request::render_command_request_banner;
 use crate::context::CToolContext;
 use crate::error::CToolResult;
@@ -104,7 +106,7 @@ pub fn preview_command_request(
 
     let mut will_execute = false;
     let mut executed = false;
-    let mut blocked = preview.final_risk == CToolCommandRisk::Blocked;
+    let blocked = preview.final_risk == CToolCommandRisk::Blocked;
     let mut rejected = false;
     let mut all_success = None;
     let mut result_file = None;
@@ -212,6 +214,26 @@ pub fn preview_command_request(
         }
     }
 
+
+    if (blocked || rejected) && result_file.is_none() {
+        let cache_root = command_request_cache_root(ctx);
+        let status = if blocked {
+            CToolCommandRequestRecordStatus::Blocked
+        } else {
+            CToolCommandRequestRecordStatus::Rejected
+        };
+        let report = record_unexecuted_command_request(
+            &ctx.scope_context.cool_workspace,
+            &cache_root,
+            &preview,
+            status,
+            &note,
+            user_feedback.as_deref(),
+        )?;
+        all_success = Some(report.all_success);
+        result_file = Some(report.result_file);
+        log_file = Some(report.log_file);
+    }
     let commands = preview
         .commands
         .iter()

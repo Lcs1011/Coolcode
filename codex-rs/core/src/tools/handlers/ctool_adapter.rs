@@ -132,6 +132,7 @@ Use this only when normal CTool file tools cannot complete the task.
 This is a controlled command request tool.
 It classifies every command as GREEN / YELLOW / RED / BLOCKED, computes the highest batch risk,
 renders a very visible COMMAND REQUEST banner, and reports whether execution happened.
+BLOCKED banners are shown as 🔴🔴🔴 COMMAND REQUEST: BLOCKED and are recorded without execution.
 
 Important display rule:
 After every call, paste output.display_text verbatim to the user.
@@ -148,8 +149,9 @@ Rules:
 - GREEN may auto-execute only by whitelist.
 - YELLOW executes only after user confirmation.
 - RED executes only after two user confirmations.
-- BLOCKED never executes and cannot be confirmed.
-- Never request Python installation, Python venv creation, pip install, conda environment creation, uv python install, pyenv, or Windows PATH changes for Python. These are BLOCKED."#
+- BLOCKED never executes and cannot be confirmed, but it must still be displayed and logged.
+- Command logs are written under CoolDir/cache/command_request/YYYY-MM-DD/.
+- Never request Python installation, Python venv creation, pip install, conda environment creation, uv python install, pyenv, Python activation scripts, or Windows PATH changes for Python. These are BLOCKED."#
         }
         "ctool_list_directory" => {
             r#"Input JSON:
@@ -260,6 +262,22 @@ Counts matching text lines without returning every matching line. Use this to es
 }
 
 Extracts matching lines as a list. unique/sort help collect failure names or summaries."#
+        }
+        "ctool_tavily_search_request" => {
+            r#"Input JSON:
+{
+  "action": "search",
+  "query": "rust cargo workspace dependency",
+  "url": null,
+  "source_file": null,
+  "target": null,
+  "file_name_hint": "rust_cargo_workspace_dependency",
+  "yellow_confirmation": null,
+  "red_first_confirmation": null,
+  "red_second_confirmation": null
+}
+
+Controlled Tavily search tool. Supports action = search, extract, zoom, research, search_with_images, extract_with_images. Tavily token is read only from CoolSystemDir/config.toml under [ctool_tavily_search].tavily_api_key and is never returned in output. Results and request_log.md are written under CoolDir/cache/web_search/YYYY-MM-DD/. GREEN may auto-execute, YELLOW needs one Y/y confirmation, RED needs two Y/y confirmations, and BLOCKED is shown as 🔴🔴🔴 TAVILY SEARCH REQUEST: BLOCKED and recorded without network execution."#
         }
         "ctool_annotate_markdown" => {
             r#"Input JSON:

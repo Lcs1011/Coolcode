@@ -47,6 +47,8 @@ use crate::tools::read::CToolRgSearchContext;
 use crate::tools::read::CToolTailFile;
 use crate::tools::special::CTOOL_ANNOTATE_MARKDOWN_TOOL_NAME;
 use crate::tools::special::CToolAnnotateMarkdown;
+use crate::tools::special::CTOOL_TAVILY_SEARCH_REQUEST_TOOL_NAME;
+use crate::tools::special::CToolTavilySearchRequest;
 
 pub fn available_specs() -> Vec<CToolSpec> {
     let command_request = CToolCommandRequest;
@@ -72,6 +74,7 @@ pub fn available_specs() -> Vec<CToolSpec> {
     let create_directory = CToolCreateDirectory;
     let delete_directory = CToolDeleteDirectory;
     let move_directory = CToolMoveDirectory;
+    let tavily_search_request = CToolTavilySearchRequest;
 
     let annotate_markdown = CToolAnnotateMarkdown;
     vec![
@@ -91,6 +94,7 @@ pub fn available_specs() -> Vec<CToolSpec> {
         edit_batch.spec(),
         annotate_markdown.spec(),
         create_file.spec(),
+        tavily_search_request.spec(),
         delete_file.spec(),
         move_file.spec(),
         create_directory.spec(),
@@ -159,6 +163,10 @@ pub fn run_tool(name: &str, ctx: &CToolContext, input: Value) -> CToolResult<Val
         }
         CTOOL_ANNOTATE_MARKDOWN_TOOL_NAME => {
             let tool = CToolAnnotateMarkdown;
+            tool.run_json(ctx, input)
+        }
+        CTOOL_TAVILY_SEARCH_REQUEST_TOOL_NAME => {
+            let tool = CToolTavilySearchRequest;
             tool.run_json(ctx, input)
         }
         CTOOL_CREATE_FILE_TOOL_NAME => {

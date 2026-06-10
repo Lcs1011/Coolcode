@@ -68,6 +68,8 @@ Yellow 必须确认一次。
 
 Red 必须确认两次。
 
+Blocked 不允许进入确认执行流程。
+
 模型不能替用户确认。
 
 没有用户确认时，默认一律拒绝执行。
@@ -85,12 +87,11 @@ SafeMode ON
 => CoolReadWrite
 => CTool allowed
 => ctool_command_request
-=> 配置加载
-
+=> 加载 CoolSystemDir\command.toml 与 CoolDir\command.toml
 => 命令分类
 => 展示完整命令
-=> 等待用户确认
-=> 执行
+=> 必要时等待用户确认
+=> 执行或拒绝
 => 记录日志
 => 返回结果
 ```
@@ -104,17 +105,22 @@ SafeMode ON
 配置分两层，沿用 Cool 配置体系：
 
 ```text
-.coolsystemconfig.toml  系统级，更高优先级
-.coolconfig.toml        项目级，低一级
+CoolSystemDir\command.toml   系统级，更高优先级
+CoolDir\command.toml         Session 级，低一级
+```
+
+说明：
+
+```text
+CoolSystemDir = LauncherDir\.cool-system
+CoolDir       = SessionRoot\.cool
 ```
 
 系统配置权限更大。
 
-系统配置可以强制把某些命令升为 Yellow / Red，也可以禁止某些命令。
+系统配置可以强制把某些命令升为 Yellow / Red / Blocked，也可以禁止某些命令。
 
-项目配置可以添加自己的 Green / Yellow / Red 规则，但不能覆盖系统级更高风险规则。
-
-<mark style="background:#d3f8b6">批注：这里是旧配置路径标准。当前 CommandRequest 配置建议改为两层 `command.toml`：系统级 `CoolSystemDir\command.toml`，Session 级 `CoolDir\command.toml`。其中 `CoolDir` 是 `SessionRoot\.cool`，不再建议用 `.coolsystemconfig.toml` / `.coolconfig.toml` 表达 CommandRequest 配置。</mark>
+Session 配置可以添加自己的 Green / Yellow / Red 规则，但不能覆盖系统级更高风险规则。
 
 ---
 
@@ -145,7 +151,6 @@ yellow_prefixes = [
   "cargo check",
   "cargo build",
   "cargo test",
-
   "cargo fmt",
   "git commit",
   "rg"
@@ -160,7 +165,6 @@ red_prefixes = [
   "git reset --hard",
   "git clean -fd",
   "powershell",
-
   "cmd",
   "python",
   "node",
@@ -193,29 +197,49 @@ red_contains = [
   ".tar",
   ".gz"
 ]
-```
 
-<mark style="background:#d3f8b6">批注：这里缺少 `blocked_prefixes` / `blocked_contains`。当前标准里 CommandRequest 不只有 Green / Yellow / Red，还需要 Blocked 硬拒绝规则；例如 Python 环境创建、安装依赖、修改 PATH 等，不应只是 Red 二次确认，而应直接 Blocked。</mark>
+blocked_prefixes = [
+  "python -m venv",
+  "py -m venv",
+  "pip install",
+  "pip3 install",
+  "python -m pip install",
+  "py -m pip install",
+  "conda install",
+  "uv python install",
+  "pyenv install"
+]
+
+blocked_contains = [
+  "set PATH=",
+  "$env:PATH",
+  "PATH=",
+  "Scripts\\activate",
+  "activate.bat",
+  "activate.ps1"
+]
+```
 
 ---
 
 ## 6. 风险等级
 
-风险等级分三类：
+风险等级分四类：
 
 ```text
-Green  = 用户白名单，免确认执行
-Yellow = 主力命令，确认一次
-Red    = 高危 / 未知 / AI 主动升级，确认两次
+Green   = 用户白名单，免确认执行
+Yellow  = 主力命令，确认一次
+Red     = 高危 / 未知 / AI 主动升级，确认两次
+Blocked = 硬拒绝命令，直接拒绝执行
 ```
 
 风险等级顺序：
 
 ```text
-Green < Yellow < Red
+Green < Yellow < Red < Blocked
 ```
 
-<mark style="background:#d3f8b6">批注：这里仍是旧三档风险标准。当前实现和新标准已经加入 `Blocked`，风险顺序应是 `Green < Yellow < Red < Blocked`。Blocked 不进入确认流程，必须直接拒绝执行。</mark>
+Blocked 不进入确认流程，但请求本身仍然要完整展示并记录。
 
 ---
 
@@ -309,6 +333,37 @@ del
 erase
 rmdir
 rd
+
+## 9.1 Blocked 规则
+
+Blocked 是硬拒绝命令。
+
+典型 Blocked：
+
+```text
+python -m venv
+py -m venv
+pip install
+pip3 install
+python -m pip install
+py -m pip install
+conda install
+uv python install
+pyenv install
+修改 PATH
+激活虚拟环境脚本
+```
+
+以下行为永远 Blocked：
+
+```text
+创建或安装新的 Python 运行环境
+安装新的 Python 包依赖
+修改 PATH 等进程环境路径
+激活虚拟环境脚本
+```
+
+Blocked 请求必须展示，但不能进入执行。
 Remove-Item
 git reset --hard
 git clean -fd
@@ -349,17 +404,16 @@ Red 必须确认两次。
 第一次：
 
 ```text
-
 First confirm? Type Y:
 ```
 
 第二次：
 
 ```text
-🔴 REDSecond confirm? Type Y:
+Second confirm? Type Y:
 ```
 
-<mark style="background:#d3f8b6">批注：这里和第 13.3 / 14.2 节存在不一致：这里第二次确认写 `Type Y`，后文又写 `RUN RED`。当前代码实现口径是 Red 两次确认都接受 `Y` / `y` 开头；如果产品最终想用 `RUN RED`，需要同步修改代码和工具说明。</mark>
+Blocked 不允许确认执行。
 
 ---
 
@@ -384,9 +438,10 @@ First confirm? Type Y:
 AI 可以提升命令危险级别，但不能降低危险级别。
 
 ```text
-系统判断 Green，AI 可以升级为 Yellow 或 Red。
-系统判断 Yellow，AI 可以升级为 Red。
-系统判断 Red，AI 不能降级。
+系统判断 Green，AI 可以升级为 Yellow / Red / Blocked。
+系统判断 Yellow，AI 可以升级为 Red / Blocked。
+系统判断 Red，AI 可以升级为 Blocked。
+系统判断 Blocked，AI 不能降级。
 ```
 
 最终风险：
@@ -426,11 +481,12 @@ Green + Green = Green
 Green + Yellow = Yellow
 Yellow + Red = Red
 Green + Red = Red
+任意 + Blocked = Blocked
 ```
 
 一组命令中只要有一个 Red，整组就是 Red，需要二次确认。
 
-<mark style="background:#d3f8b6">批注：批量风险规则也需要补上 Blocked：一组命令中只要有一个 Blocked，整组就是 Blocked，直接拒绝，不允许通过 Yellow/Red 确认执行。</mark>
+一组命令中只要有一个 Blocked，整组就是 Blocked，直接拒绝。
 
 ---
 
@@ -477,7 +533,20 @@ CurrentDir: C:\CodexLab\codex\codex-rs
 [2] git reset --hard
 
 First confirm? Type Y:
-Second confirm? Type RUN RED:
+Second confirm? Type Y:
+==============================
+```
+
+### 13.4 Blocked 请求
+
+```text
+==============================
+🔴🔴🔴 COMMAND REQUEST: BLOCKED
+CurrentDir: C:\CodexLab\codex\codex-rs
+Blocked: hard policy
+
+[1] python -m venv .venv
+[2] pip install -r requirements.txt
 ==============================
 ```
 
@@ -506,16 +575,21 @@ Y / y 开头 = 进入第二次确认
 空输入 = 拒绝执行
 ```
 
-
 第二次确认：
 
 ```text
-RUN RED = 同意执行
+Y / y 开头 = 同意执行
 其他任何输入 = 拒绝执行
 空输入 = 拒绝执行
 ```
 
-<mark style="background:#d3f8b6">批注：这里和第 9 节不一致。第 9 节写第二次确认 `Type Y`，这里写 `RUN RED`。建议统一一个口径；按当前代码应统一成 `Y / y 开头 = 同意执行第二次确认`。</mark>
+### 14.3 Blocked
+
+```text
+不进入确认流程
+直接拒绝执行
+仍然返回展示信息和拒绝原因
+```
 
 ---
 
@@ -586,19 +660,18 @@ duration
 建议日志目录：
 
 ```text
-.coolcache\command_request\YYYY-MM-DD\
+CoolDir\cache\command_request\YYYY-MM-DD\
 ```
-
-<mark style="background:#d3f8b6">批注：这里是旧日志目录。当前新标准应写入 `CoolDir\cache\command_request\YYYY-MM-DD\`，也就是 `SessionRoot\.cool\cache\command_request\YYYY-MM-DD\`，不是 `.coolcache\command_request\YYYY-MM-DD\`。</mark>
 
 示例：
 
 ```text
-.coolcache\command_request\2026-06-09\
+SessionRoot\.cool\cache\command_request\2026-06-09\
   request_log.md
   00000_yellow_cargo_check.md
   00001_green_git_status.md
   00002_red_powershell.md
+  00003_blocked_python_venv.md
 ```
 
 ### 17.1 request_log.md
@@ -696,7 +769,7 @@ Risk: Yellow
 Approved: Yes
 
 Output:
-.coolcache\command_request\2026-06-09\00000_yellow_cargo_check.md
+SessionRoot\.cool\cache\command_request\2026-06-09\00000_yellow_cargo_check.md
 
 Summary:
 cargo check -p ctool passed.
@@ -719,6 +792,8 @@ Codex 需要详细日志时，再用 `ctool_read_file` / `ctool_read_code_range`
 所有下载内容相关命令 = Red
 所有打开网站相关命令 = Red
 ```
+
+如果同时命中 Blocked 规则，则按 Blocked 处理。
 
 包括：
 
@@ -747,13 +822,11 @@ git clone 外部仓库
 
 ```text
 CurrentDir 必须显示
-默认执行目录是当前 CMD 文件夹
+默认执行目录是 CoolWorkspace
 禁止静默切换目录
 如果命令里包含 cd / pushd，至少 Red
 如果命令目标明显超出 CurrentDir，至少 Red
 ```
-
-<mark style="background:#d3f8b6">批注：这里的默认执行目录需要更新。当前代码口径使用 `ctx.scope_context.cool_workspace` 作为命令执行 CurrentDir，不是“当前 CMD 文件夹”。如果产品想改回当前目录，需要同步调整实现；否则文档应写 `默认执行目录是 CoolWorkspace`。</mark>
 
 未来可以进一步做：
 
@@ -762,7 +835,54 @@ CurrentDir 必须显示
 命令涉及文件路径时，调用 CToolScopeContext 判断
 ```
 
-第一版先做风险分级和用户确认。
+当前版本先完成风险分级、确认和执行链路，后续继续加强命令解析与 Scope 联动。
 
 ---
 
+
+## 21. 推荐开发顺序
+
+当前实现已经覆盖：
+
+```text
+配置加载
+Green / Yellow / Red / Blocked 分类
+Yellow 一次确认
+Red 二次确认
+Blocked 直接拒绝
+真实执行命令
+写 request_log.md
+写单次结果文件
+返回短摘要
+```
+
+后续加强方向：
+
+```text
+加强命令解析
+补充更多 blocked_prefixes / blocked_contains
+增强路径识别并接入 CToolScopeContext
+优化日志摘要与拒绝原因文本
+```
+
+---
+
+## 22. 最终采用版
+
+本方案正式采用以下原则：
+
+```text
+ctool_command_request 是受 SafeMode 管制的命令申请工具。
+普通 CTool 能完成时，不使用它。
+所有命令必须完整展示。
+Green 是用户白名单，免确认但必须展示和记录。
+Yellow 是主力命令，确认一次。
+Red 是高危、未知、下载、打开网站、AI 升级命令，确认两次。
+Blocked 是硬拒绝命令，必须展示，但不能执行。
+AI 可以升级风险，不能降级风险。
+拒绝时允许用户带反馈，反馈返回给 AI。
+一组命令按最高风险处理。
+命令结果写入 CoolDir\cache\command_request\YYYY-MM-DD\。
+工具只把结果文件路径和短摘要返回给 Codex。
+Codex 通过普通 CTool 读取结果文件。
+```
