@@ -16,6 +16,8 @@ pub const COOL_DIR_NAME: &str = ".cool";
 pub const COOL_SYSTEM_DIR_NAME: &str = ".cool-system";
 pub const CONFIG_FILE_NAME: &str = "config.toml";
 pub const SCOPE_FILE_NAME: &str = "scope.toml";
+pub const COMMAND_FILE_NAME: &str = "command.toml";
+pub const COOL_SYSTEM_DIR_ENV: &str = "COOL_SYSTEM_DIR";
 pub const COOL_SYSTEM_CONFIG_ENV: &str = "COOL_SYSTEM_CONFIG";
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
@@ -28,7 +30,6 @@ pub struct CToolSessionConfig {
 pub struct CToolScopeConfig {
     #[serde(default)]
     pub files: CToolScopeRuleSet,
-
     #[serde(default)]
     pub folders: CToolScopeRuleSet,
 }
@@ -37,10 +38,8 @@ pub struct CToolScopeConfig {
 pub struct CToolScopeRuleSet {
     #[serde(default)]
     pub readwrite: Vec<PathBuf>,
-
     #[serde(default)]
     pub readonly: Vec<PathBuf>,
-
     #[serde(default)]
     pub hide: Vec<PathBuf>,
 }
@@ -49,7 +48,6 @@ pub struct CToolScopeRuleSet {
 struct CoolSessionConfigToml {
     #[serde(default)]
     ctool_scope_base: Option<String>,
-
     #[serde(default)]
     cool_workspace: Option<PathBuf>,
 }
@@ -88,7 +86,22 @@ pub fn locate_cool_scope_path(session_root: impl AsRef<Path>) -> PathBuf {
     locate_cool_dir(session_root).join(SCOPE_FILE_NAME)
 }
 
-pub fn locate_cool_system_config_path() -> Option<PathBuf> {
+pub fn locate_cool_command_path(session_root: impl AsRef<Path>) -> PathBuf {
+    locate_cool_dir(session_root).join(COMMAND_FILE_NAME)
+}
+
+pub fn locate_cool_system_dir() -> Option<PathBuf> {
+    let value = env::var(COOL_SYSTEM_DIR_ENV).ok()?;
+    let value = value.trim();
+
+    if value.is_empty() {
+        None
+    } else {
+        Some(PathBuf::from(value))
+    }
+}
+
+pub fn locate_legacy_cool_system_config_path() -> Option<PathBuf> {
     let value = env::var(COOL_SYSTEM_CONFIG_ENV).ok()?;
     let value = value.trim();
 
@@ -97,6 +110,22 @@ pub fn locate_cool_system_config_path() -> Option<PathBuf> {
     } else {
         Some(PathBuf::from(value))
     }
+}
+
+pub fn locate_cool_system_config_path() -> Option<PathBuf> {
+    if let Some(system_dir) = locate_cool_system_dir() {
+        return Some(system_dir.join(CONFIG_FILE_NAME));
+    }
+
+    locate_legacy_cool_system_config_path()
+}
+
+pub fn locate_cool_system_scope_path() -> Option<PathBuf> {
+    locate_cool_system_dir().map(|dir| dir.join(SCOPE_FILE_NAME))
+}
+
+pub fn locate_cool_system_command_path() -> Option<PathBuf> {
+    locate_cool_system_dir().map(|dir| dir.join(COMMAND_FILE_NAME))
 }
 
 pub fn load_optional_cool_session_config(path: &Path) -> CToolResult<CToolSessionConfig> {
@@ -209,15 +238,14 @@ pub fn parse_cool_command_config_toml(text: &str) -> CToolResult<CToolCommandCon
 }
 
 pub fn load_merged_cool_command_config(
-    user_config_path: &Path,
-    system_config_path: Option<&Path>,
+    session_command_path: &Path,
+    system_command_path: Option<&Path>,
 ) -> CToolResult<CToolCommandConfig> {
-    let user_config = load_optional_cool_command_config(user_config_path)?;
-
-    let system_config = match system_config_path {
+    let session_config = load_optional_cool_command_config(session_command_path)?;
+    let system_config = match system_command_path {
         Some(path) => load_optional_cool_command_config(path)?,
         None => empty_command_config(),
     };
 
-    Ok(merge_command_configs(user_config, system_config))
+    Ok(merge_command_configs(session_config, system_config))
 }

@@ -45,6 +45,8 @@ use crate::tools::read::CToolRegexSearch;
 use crate::tools::read::CToolRgSearch;
 use crate::tools::read::CToolRgSearchContext;
 use crate::tools::read::CToolTailFile;
+use crate::tools::special::CTOOL_ANNOTATE_MARKDOWN_TOOL_NAME;
+use crate::tools::special::CToolAnnotateMarkdown;
 
 pub fn available_specs() -> Vec<CToolSpec> {
     let command_request = CToolCommandRequest;
@@ -71,6 +73,7 @@ pub fn available_specs() -> Vec<CToolSpec> {
     let delete_directory = CToolDeleteDirectory;
     let move_directory = CToolMoveDirectory;
 
+    let annotate_markdown = CToolAnnotateMarkdown;
     vec![
         command_request.spec(),
         list_directory.spec(),
@@ -86,6 +89,7 @@ pub fn available_specs() -> Vec<CToolSpec> {
         edit_insert.spec(),
         preview_diff.spec(),
         edit_batch.spec(),
+        annotate_markdown.spec(),
         create_file.spec(),
         delete_file.spec(),
         move_file.spec(),
@@ -151,6 +155,10 @@ pub fn run_tool(name: &str, ctx: &CToolContext, input: Value) -> CToolResult<Val
         }
         CTOOL_EDIT_BATCH_TOOL_NAME => {
             let tool = CToolEditBatch;
+            tool.run_json(ctx, input)
+        }
+        CTOOL_ANNOTATE_MARKDOWN_TOOL_NAME => {
+            let tool = CToolAnnotateMarkdown;
             tool.run_json(ctx, input)
         }
         CTOOL_CREATE_FILE_TOOL_NAME => {

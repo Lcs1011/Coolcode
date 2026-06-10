@@ -10,9 +10,13 @@ use crate::scope_config::CToolScopeRuleSet;
 use crate::scope_config::empty_scope_config;
 use crate::scope_config::load_optional_cool_config;
 use crate::scope_config::load_optional_cool_session_config;
+use crate::scope_config::locate_cool_command_path;
 use crate::scope_config::locate_cool_config_path;
 use crate::scope_config::locate_cool_dir;
 use crate::scope_config::locate_cool_scope_path;
+use crate::scope_config::locate_cool_system_command_path;
+use crate::scope_config::locate_cool_system_config_path;
+use crate::scope_config::locate_cool_system_scope_path;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CToolScopeContext {
@@ -24,6 +28,8 @@ pub struct CToolScopeContext {
     pub user_config_path: PathBuf,
     pub session_config_path: PathBuf,
     pub system_config_path: Option<PathBuf>,
+    pub session_command_path: PathBuf,
+    pub system_command_path: Option<PathBuf>,
 
     pub user_config: CToolScopeConfig,
     pub system_config: CToolScopeConfig,
@@ -32,11 +38,12 @@ pub struct CToolScopeContext {
 pub fn build_ctool_scope_context(
     current_dir: impl AsRef<Path>,
     fallback_base_scope: CToolScopeBase,
-    _system_config_path: Option<PathBuf>,
+    legacy_system_config_path: Option<PathBuf>,
 ) -> CToolResult<CToolScopeContext> {
     let session_root = canonicalize_existing_path(current_dir.as_ref())?;
     let session_config_path = locate_cool_config_path(&session_root);
     let session_scope_path = locate_cool_scope_path(&session_root);
+    let session_command_path = locate_cool_command_path(&session_root);
 
     let session_config = load_optional_cool_session_config(&session_config_path)?;
     let base_scope = session_config.scope_base.unwrap_or(fallback_base_scope);
@@ -47,8 +54,18 @@ pub fn build_ctool_scope_context(
         None => session_root.clone(),
     };
 
-    let user_config = load_optional_cool_config(&session_scope_path)?;
-    let user_config = normalize_scope_config(user_config, &cool_workspace);
+    let user_config = normalize_scope_config(
+        load_optional_cool_config(&session_scope_path)?,
+        &cool_workspace,
+    );
+
+    let system_config_path = locate_cool_system_config_path().or(legacy_system_config_path);
+    let system_scope_path = locate_cool_system_scope_path();
+    let system_command_path = locate_cool_system_command_path();
+    let system_config = match system_scope_path.as_deref() {
+        Some(path) => normalize_scope_config(load_optional_cool_config(path)?, &cool_workspace),
+        None => empty_scope_config(),
+    };
 
     Ok(CToolScopeContext {
         current_dir: session_root.clone(),
@@ -57,9 +74,11 @@ pub fn build_ctool_scope_context(
         base_scope,
         user_config_path: session_scope_path,
         session_config_path,
-        system_config_path: None,
+        system_config_path,
+        session_command_path,
+        system_command_path,
         user_config,
-        system_config: empty_scope_config(),
+        system_config,
     })
 }
 
@@ -228,7 +247,6 @@ fn path_access(ctx: &CToolScopeContext, path: impl AsRef<Path>) -> PathAccess {
     if is_hard_protected_config_path(ctx, &path) {
         return PathAccess::Hidden;
     }
-
     if matches_any_exact_path(&path, &ctx.system_config.files.hide) {
         return PathAccess::Hidden;
     }

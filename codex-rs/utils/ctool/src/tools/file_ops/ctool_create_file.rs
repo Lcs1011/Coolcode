@@ -8,9 +8,9 @@ use crate::context::CToolContext;
 use crate::error::CToolError;
 use crate::error::CToolResult;
 use crate::gate;
-use crate::tools::file_ops::ensure_safe_text_file_extension;
 use crate::tool::CTool;
 use crate::tool::CToolSpec;
+use crate::tools::file_ops::ensure_safe_text_file_extension;
 
 pub const CTOOL_CREATE_FILE_TOOL_NAME: &str = "ctool_create_file";
 

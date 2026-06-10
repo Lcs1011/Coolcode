@@ -6,7 +6,7 @@
       {
         "id": "c0898ba17616e193",
         "type": "tabs",
-        "dimension": 26.87427912341407,
+        "dimension": 26.875407697325503,
         "children": [
           {
             "id": "3352e2b890530b3c",
@@ -21,13 +21,28 @@
               "icon": "lucide-file",
               "title": "CTool四层结构"
             }
+          },
+          {
+            "id": "e7f6a66ee24b13dc",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "一些定义和基本设定.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "一些定义和基本设定"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       },
       {
         "id": "e3d2ba2ac03d6c7f",
         "type": "tabs",
-        "dimension": 36.793540945790085,
+        "dimension": 33.52902804957599,
         "children": [
           {
             "id": "4fabe1519d8ee500",
@@ -56,6 +71,48 @@
               "icon": "lucide-file",
               "title": "CTool 基础类"
             }
+          },
+          {
+            "id": "9f2ede547f90274b",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "CTool 四层结构 修订.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "CTool 四层结构 修订"
+            }
+          },
+          {
+            "id": "453572053b87dc2f",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "启动 bat.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "启动 bat"
+            }
+          },
+          {
+            "id": "b7f6faa118eb5531",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "启动 bat.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "启动 bat"
+            }
           }
         ],
         "currentTab": 1
@@ -63,7 +120,7 @@
       {
         "id": "5e101feea4917d47",
         "type": "tabs",
-        "dimension": 36.332179930795846,
+        "dimension": 39.595564253098495,
         "children": [
           {
             "id": "c42ba0c1091b0de4",
@@ -71,12 +128,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "CToolScope 视野 详细设计.md",
+                "file": "CToolCommandRequest.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "CToolScope 视野 详细设计"
+              "title": "CToolCommandRequest"
             }
           }
         ]
@@ -147,11 +204,27 @@
         "type": "tabs",
         "children": [
           {
+            "id": "e26245278de1322a",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "CToolCommandRequest.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "CToolCommandRequest 的大纲"
+            }
+          },
+          {
             "id": "a896d903ed084d8e",
             "type": "leaf",
             "state": {
               "type": "backlink",
               "state": {
+                "file": "CToolCommandRequest.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -161,7 +234,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "反向链接"
+              "title": "CToolCommandRequest 的反向链接列表"
             }
           },
           {
@@ -170,11 +243,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
+                "file": "CToolCommandRequest.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "出链"
+              "title": "CToolCommandRequest 的出链列表"
             }
           },
           {
@@ -205,27 +279,12 @@
               "icon": "lucide-archive",
               "title": "添加笔记属性"
             }
-          },
-          {
-            "id": "e26245278de1322a",
-            "type": "leaf",
-            "state": {
-              "type": "outline",
-              "state": {
-                "followCursor": false,
-                "showSearch": false,
-                "searchQuery": ""
-              },
-              "icon": "lucide-list",
-              "title": "大纲"
-            }
           }
         ]
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "left-ribbon": {
     "hiddenItems": {
@@ -238,22 +297,32 @@
       "bases:新建数据库": false
     }
   },
-  "active": "cf984d54dcf70c39",
+  "active": "c42ba0c1091b0de4",
   "lastOpenFiles": [
-    "未命名 3.md",
     "CTool 基础类.md",
+    "启动 bat.md",
     "CToolCommandRequest.md",
-    "TaskInCodex.md",
-    "CTool四层结构.md",
-    "旧文档/CTool四层结构.md",
-    "CToolTavilySearchRequest.md",
-    "未命名 设定4.md",
+    "未命名.base",
+    "未命名 1.base",
+    "未命名 2.base",
+    "未命名 3.base",
+    "未命名 4.base",
+    "CToolScope 视野详细设计 修订.md",
     "一些定义和基本设定.md",
+    "Task.md",
+    "Coolcode 产品诉求.md",
+    "CToolTavilySearchRequest.md",
+    "CTool 四层结构 修订.md",
+    "CTool四层结构.md",
     "CToolScope 视野 详细设计.md",
+    "2026-06-10.md",
+    "未命名 3.md",
+    "TaskInCodex.md",
+    "旧文档/CTool四层结构.md",
+    "未命名 设定4.md",
     "旧文档/视野函数.md",
     "旧文档",
     "New folder",
-    "注释工具.md",
-    "Coolcode 产品诉求.md"
+    "注释工具.md"
   ]
 }

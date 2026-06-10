@@ -124,7 +124,9 @@ impl Matcher {
             let regex = RegexBuilder::new(query)
                 .case_insensitive(!case_sensitive)
                 .build()
-                .map_err(|error| CToolError::InvalidInput(format!("invalid regex pattern: {error}")))?;
+                .map_err(|error| {
+                    CToolError::InvalidInput(format!("invalid regex pattern: {error}"))
+                })?;
             Ok(Self {
                 literal: None,
                 regex: Some(regex),

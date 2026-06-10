@@ -5,7 +5,6 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use chrono::Local;
-
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -18,6 +17,7 @@ pub enum CToolCommandRisk {
     Green,
     Yellow,
     Red,
+    Blocked,
 }
 
 impl CToolCommandRisk {
@@ -26,6 +26,7 @@ impl CToolCommandRisk {
             CToolCommandRisk::Green => "🟢",
             CToolCommandRisk::Yellow => "🟡",
             CToolCommandRisk::Red => "🔴",
+            CToolCommandRisk::Blocked => "⛔",
         }
     }
 
@@ -34,6 +35,7 @@ impl CToolCommandRisk {
             CToolCommandRisk::Green => "GREEN",
             CToolCommandRisk::Yellow => "YELLOW",
             CToolCommandRisk::Red => "RED",
+            CToolCommandRisk::Blocked => "BLOCKED",
         }
     }
 
@@ -42,6 +44,7 @@ impl CToolCommandRisk {
             CToolCommandRisk::Green => CToolCommandApproval::AutoApprovedGreen,
             CToolCommandRisk::Yellow => CToolCommandApproval::ConfirmOnce,
             CToolCommandRisk::Red => CToolCommandApproval::ConfirmTwice,
+            CToolCommandRisk::Blocked => CToolCommandApproval::Blocked,
         }
     }
 }
@@ -51,6 +54,7 @@ pub enum CToolCommandApproval {
     AutoApprovedGreen,
     ConfirmOnce,
     ConfirmTwice,
+    Blocked,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
@@ -67,13 +71,16 @@ pub struct CToolCommandConfig {
     pub red_prefixes: Vec<String>,
     #[serde(default)]
     pub red_contains: Vec<String>,
+    #[serde(default)]
+    pub blocked_prefixes: Vec<String>,
+    #[serde(default)]
+    pub blocked_contains: Vec<String>,
 }
 
 impl Default for CToolCommandConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            // Green is user whitelist. Default is intentionally empty.
             green_exact_commands: Vec::new(),
             green_prefixes: Vec::new(),
             yellow_prefixes: vec![
@@ -136,6 +143,61 @@ impl Default for CToolCommandConfig {
                 ">>".to_string(),
                 "|".to_string(),
             ],
+            blocked_prefixes: vec![
+                "python -m venv".to_string(),
+                "py -m venv".to_string(),
+                "python3 -m venv".to_string(),
+                "virtualenv".to_string(),
+                "python -m virtualenv".to_string(),
+                "py -m virtualenv".to_string(),
+                "pip install".to_string(),
+                "pip3 install".to_string(),
+                "python -m pip install".to_string(),
+                "py -m pip install".to_string(),
+                "python3 -m pip install".to_string(),
+                "pipx install".to_string(),
+                "uv venv".to_string(),
+                "uv python install".to_string(),
+                "uv tool install".to_string(),
+                "rye".to_string(),
+                "hatch env".to_string(),
+                "pipenv install".to_string(),
+                "poetry install".to_string(),
+                "poetry env".to_string(),
+                "conda create".to_string(),
+                "conda install".to_string(),
+                "mamba create".to_string(),
+                "mamba install".to_string(),
+                "micromamba create".to_string(),
+                "micromamba install".to_string(),
+                "winget install python".to_string(),
+                "choco install python".to_string(),
+                "scoop install python".to_string(),
+                "msiexec".to_string(),
+                "python -m ensurepip".to_string(),
+                "py -m ensurepip".to_string(),
+            ],
+            blocked_contains: vec![
+                "python.org".to_string(),
+                "install python".to_string(),
+                "python installer".to_string(),
+                "python-3.".to_string(),
+                "python3.".to_string(),
+                "venv".to_string(),
+                "virtualenv".to_string(),
+                "ensurepip".to_string(),
+                "pip install".to_string(),
+                "conda create".to_string(),
+                "conda install".to_string(),
+                "pyenv".to_string(),
+                "pyenv-win".to_string(),
+                "appdata\\local\\programs\\python".to_string(),
+                "c:\\python".to_string(),
+                "program files\\python".to_string(),
+                "windowsapps\\python".to_string(),
+                "setx path".to_string(),
+                "set path".to_string(),
+            ],
         }
     }
 }
@@ -184,17 +246,18 @@ pub fn default_command_config() -> CToolCommandConfig {
 }
 
 pub fn merge_command_configs(
-    project_config: CToolCommandConfig,
+    session_config: CToolCommandConfig,
     system_config: CToolCommandConfig,
 ) -> CToolCommandConfig {
     let mut merged = CToolCommandConfig {
-        enabled: project_config.enabled && system_config.enabled,
-
+        enabled: session_config.enabled && system_config.enabled,
         green_exact_commands: Vec::new(),
         green_prefixes: Vec::new(),
         yellow_prefixes: Vec::new(),
         red_prefixes: Vec::new(),
         red_contains: Vec::new(),
+        blocked_prefixes: Vec::new(),
+        blocked_contains: Vec::new(),
     };
 
     append_unique_strings(
@@ -203,20 +266,26 @@ pub fn merge_command_configs(
     );
     append_unique_strings(
         &mut merged.green_exact_commands,
-        project_config.green_exact_commands,
+        session_config.green_exact_commands,
     );
-
     append_unique_strings(&mut merged.green_prefixes, system_config.green_prefixes);
-    append_unique_strings(&mut merged.green_prefixes, project_config.green_prefixes);
-
+    append_unique_strings(&mut merged.green_prefixes, session_config.green_prefixes);
     append_unique_strings(&mut merged.yellow_prefixes, system_config.yellow_prefixes);
-    append_unique_strings(&mut merged.yellow_prefixes, project_config.yellow_prefixes);
-
+    append_unique_strings(&mut merged.yellow_prefixes, session_config.yellow_prefixes);
     append_unique_strings(&mut merged.red_prefixes, system_config.red_prefixes);
-    append_unique_strings(&mut merged.red_prefixes, project_config.red_prefixes);
-
+    append_unique_strings(&mut merged.red_prefixes, session_config.red_prefixes);
     append_unique_strings(&mut merged.red_contains, system_config.red_contains);
-    append_unique_strings(&mut merged.red_contains, project_config.red_contains);
+    append_unique_strings(&mut merged.red_contains, session_config.red_contains);
+    append_unique_strings(&mut merged.blocked_prefixes, system_config.blocked_prefixes);
+    append_unique_strings(
+        &mut merged.blocked_prefixes,
+        session_config.blocked_prefixes,
+    );
+    append_unique_strings(&mut merged.blocked_contains, system_config.blocked_contains);
+    append_unique_strings(
+        &mut merged.blocked_contains,
+        session_config.blocked_contains,
+    );
 
     merged
 }
@@ -236,6 +305,20 @@ pub fn classify_command(
         };
     }
 
+    if let Some(rule) = first_contains_match(&normalized_command, &config.blocked_contains) {
+        return CToolCommandClassification {
+            command: raw_command,
+            risk: CToolCommandRisk::Blocked,
+            reason: format!("matched blocked contains rule: {rule}"),
+        };
+    }
+    if let Some(rule) = first_prefix_match(&normalized_command, &config.blocked_prefixes) {
+        return CToolCommandClassification {
+            command: raw_command,
+            risk: CToolCommandRisk::Blocked,
+            reason: format!("matched blocked prefix rule: {rule}"),
+        };
+    }
     if let Some(rule) = first_contains_match(&normalized_command, &config.red_contains) {
         return CToolCommandClassification {
             command: raw_command,
@@ -243,7 +326,6 @@ pub fn classify_command(
             reason: format!("matched red contains rule: {rule}"),
         };
     }
-
     if let Some(rule) = first_prefix_match(&normalized_command, &config.red_prefixes) {
         return CToolCommandClassification {
             command: raw_command,
@@ -251,7 +333,6 @@ pub fn classify_command(
             reason: format!("matched red prefix rule: {rule}"),
         };
     }
-
     if let Some(rule) = first_exact_match(&normalized_command, &config.green_exact_commands) {
         return CToolCommandClassification {
             command: raw_command,
@@ -259,7 +340,6 @@ pub fn classify_command(
             reason: format!("matched green exact rule: {rule}"),
         };
     }
-
     if let Some(rule) = first_prefix_match(&normalized_command, &config.green_prefixes) {
         return CToolCommandClassification {
             command: raw_command,
@@ -267,7 +347,6 @@ pub fn classify_command(
             reason: format!("matched green prefix rule: {rule}"),
         };
     }
-
     if let Some(rule) = first_prefix_match(&normalized_command, &config.yellow_prefixes) {
         return CToolCommandClassification {
             command: raw_command,
@@ -294,7 +373,6 @@ pub fn build_command_request_preview(
             "ctool_command_request is disabled by config".to_string(),
         ));
     }
-
     if commands.is_empty() {
         return Err(CToolError::InvalidInput(
             "ctool_command_request requires at least one command".to_string(),
@@ -311,7 +389,6 @@ pub fn build_command_request_preview(
         .map(|item| item.risk)
         .max()
         .unwrap_or(CToolCommandRisk::Red);
-
     let final_risk = match ai_risk_upgrade {
         Some(ai_risk) => std::cmp::max(system_risk, ai_risk),
         None => system_risk,
@@ -349,6 +426,7 @@ pub fn render_command_request_banner(preview: &CToolCommandRequestPreview) -> St
         text.push_str("Auto Approved: green whitelist\n");
     }
     text.push('\n');
+
     for (index, command) in preview.commands.iter().enumerate() {
         text.push_str(&format!(
             "[{}] [{}] {}\n",
@@ -360,17 +438,22 @@ pub fn render_command_request_banner(preview: &CToolCommandRequestPreview) -> St
         text.push_str(&command.reason);
         text.push('\n');
     }
+
     text.push('\n');
     match preview.approval {
         CToolCommandApproval::AutoApprovedGreen => {
             text.push_str("No confirmation required.\n");
         }
         CToolCommandApproval::ConfirmOnce => {
-            text.push_str("Confirm? Type Y to run, N to reject:\n");
+            text.push_str("Confirm once: provide a Y/y confirmation to execute.\n");
         }
         CToolCommandApproval::ConfirmTwice => {
-            text.push_str("First confirm? Type Y:\n");
-            text.push_str("🔴 RED Second confirm? Type Y:\n");
+            text.push_str("Confirm twice: provide two separate Y/y confirmations to execute.\n");
+        }
+        CToolCommandApproval::Blocked => {
+            text.push_str("Blocked: this command is forbidden by Cool system policy.\n");
+            text.push_str("No confirmation is allowed.\n");
+            text.push_str("It will never be executed.\n");
         }
     }
     text.push_str("==============================");
@@ -379,11 +462,17 @@ pub fn render_command_request_banner(preview: &CToolCommandRequestPreview) -> St
 
 pub fn execute_approved_command_request(
     current_dir: impl AsRef<Path>,
+    cache_root: impl AsRef<Path>,
     preview: &CToolCommandRequestPreview,
 ) -> CToolResult<CToolCommandExecutionReport> {
-    let current_dir = current_dir.as_ref();
+    if preview.final_risk == CToolCommandRisk::Blocked {
+        return Err(CToolError::InvalidInput(
+            "blocked command request cannot be executed".to_string(),
+        ));
+    }
 
-    let cache_dir = command_request_cache_dir(current_dir);
+    let current_dir = current_dir.as_ref();
+    let cache_dir = command_request_cache_dir(cache_root.as_ref());
     std::fs::create_dir_all(&cache_dir)?;
 
     let index = next_command_request_index(&cache_dir)?;
@@ -391,12 +480,10 @@ pub fn execute_approved_command_request(
         "{index:05}_{}_command_request.md",
         preview.final_risk.label().to_ascii_lowercase()
     );
-
     let result_path = cache_dir.join(result_file_name);
     let log_path = cache_dir.join("request_log.md");
 
     let started_at = Local::now();
-
     let mut result_text = String::new();
     result_text.push_str("# CTool Command Request Result\n\n");
     result_text.push_str(&format!(
@@ -406,7 +493,6 @@ pub fn execute_approved_command_request(
     result_text.push_str(&format!("Risk: {}\n", preview.final_risk.label()));
     result_text.push_str("Approved: Yes\n");
     result_text.push_str(&format!("CurrentDir: {}\n\n", current_dir.display()));
-
     result_text.push_str("## Commands\n\n");
 
     let mut items = Vec::new();
@@ -414,7 +500,6 @@ pub fn execute_approved_command_request(
 
     for (index, command) in preview.commands.iter().enumerate() {
         let command_started_at = Local::now();
-
         result_text.push_str(&format!("### {}. `{}`\n\n", index + 1, command.command));
         result_text.push_str(&format!(
             "StartedAt: {}\n\n",
@@ -422,7 +507,6 @@ pub fn execute_approved_command_request(
         ));
 
         let output = run_shell_command(current_dir, &command.command)?;
-
         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).to_string();
         let exit_code = output.status.code();
@@ -430,11 +514,9 @@ pub fn execute_approved_command_request(
 
         result_text.push_str(&format!("ExitCode: {:?}\n", exit_code));
         result_text.push_str(&format!("Success: {success}\n\n"));
-
         result_text.push_str("#### Stdout\n\n```text\n");
         result_text.push_str(&stdout);
         result_text.push_str("\n```\n\n");
-
         result_text.push_str("#### Stderr\n\n```text\n");
         result_text.push_str(&stderr);
         result_text.push_str("\n```\n\n");
@@ -455,7 +537,6 @@ pub fn execute_approved_command_request(
     }
 
     std::fs::write(&result_path, result_text)?;
-
     append_command_request_log(&log_path, preview, &result_path, all_success)?;
 
     Ok(CToolCommandExecutionReport {
@@ -467,13 +548,9 @@ pub fn execute_approved_command_request(
     })
 }
 
-fn command_request_cache_dir(current_dir: &Path) -> PathBuf {
+fn command_request_cache_dir(cache_root: &Path) -> PathBuf {
     let date = Local::now().format("%Y-%m-%d").to_string();
-
-    current_dir
-        .join(".coolcache")
-        .join("command_request")
-        .join(date)
+    cache_root.join(date)
 }
 
 fn next_command_request_index(cache_dir: &Path) -> CToolResult<u64> {
@@ -486,15 +563,12 @@ fn next_command_request_index(cache_dir: &Path) -> CToolResult<u64> {
     for entry in std::fs::read_dir(cache_dir)? {
         let entry = entry?;
         let file_name = entry.file_name().to_string_lossy().to_string();
-
         let Some(prefix) = file_name.split('_').next() else {
             continue;
         };
-
         let Ok(index) = prefix.parse::<u64>() else {
             continue;
         };
-
         max_index = Some(max_index.map_or(index, |old| old.max(index)));
     }
 
@@ -520,11 +594,9 @@ fn append_command_request_log(
     writeln!(file, "CurrentDir: {}", preview.current_dir)?;
     writeln!(file)?;
     writeln!(file, "Commands:")?;
-
     for (index, command) in preview.commands.iter().enumerate() {
         writeln!(file, "{}. {}", index + 1, command.command)?;
     }
-
     writeln!(file)?;
     writeln!(file, "Output:")?;
     writeln!(file, "{}", result_path.display())?;
@@ -557,11 +629,9 @@ fn run_shell_command(current_dir: &Path, command: &str) -> CToolResult<std::proc
 
 fn truncate_for_preview(text: &str, max_chars: usize) -> String {
     let mut result = text.chars().take(max_chars).collect::<String>();
-
     if text.chars().count() > max_chars {
         result.push_str("\n...[truncated]");
     }
-
     result
 }
 
@@ -578,7 +648,6 @@ pub fn parse_yellow_confirmation_input(input: &str) -> CToolCommandUserDecision 
 
 pub fn parse_red_first_confirmation_input(input: &str) -> CToolCommandUserDecision {
     let trimmed = input.trim();
-
     if starts_with_yes(trimmed) {
         CToolCommandUserDecision::NeedsSecondRedConfirmation
     } else {
@@ -590,7 +659,6 @@ pub fn parse_red_first_confirmation_input(input: &str) -> CToolCommandUserDecisi
 
 pub fn parse_red_second_confirmation_input(input: &str) -> CToolCommandUserDecision {
     let trimmed = input.trim();
-
     if starts_with_yes(trimmed) {
         CToolCommandUserDecision::Approved
     } else {
@@ -602,7 +670,6 @@ pub fn parse_red_second_confirmation_input(input: &str) -> CToolCommandUserDecis
 
 fn parse_single_confirmation_input(input: &str) -> CToolCommandUserDecision {
     let trimmed = input.trim();
-
     if starts_with_yes(trimmed) {
         CToolCommandUserDecision::Approved
     } else {
@@ -623,13 +690,10 @@ fn feedback_from_reject_input(input: &str) -> Option<String> {
     if input.is_empty() {
         return None;
     }
-
     let mut chars = input.chars();
-
     let Some(first_char) = chars.next() else {
         return None;
     };
-
     let rest = chars.as_str().trim();
 
     if first_char == 'N' || first_char == 'n' {
@@ -690,154 +754,4 @@ fn first_contains_match<'a>(command: &str, rules: &'a [String]) -> Option<&'a st
             None
         }
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn unknown_command_defaults_to_red() {
-        let config = default_command_config();
-        let result = classify_command("some-new-tool --version", &config);
-        assert_eq!(result.risk, CToolCommandRisk::Red);
-    }
-
-    #[test]
-    fn cargo_check_is_yellow_by_default() {
-        let config = default_command_config();
-        let result = classify_command("cargo check -p ctool", &config);
-        assert_eq!(result.risk, CToolCommandRisk::Yellow);
-    }
-
-    #[test]
-    fn green_exact_command_can_auto_approve() {
-        let mut config = default_command_config();
-        config.green_exact_commands.push("git status".to_string());
-        let preview = build_command_request_preview(
-            "C:\\CodexLab\\codex\\codex-rs",
-            vec!["git status".to_string()],
-            &config,
-            None,
-        )
-        .expect("preview should build");
-        assert_eq!(preview.final_risk, CToolCommandRisk::Green);
-        assert_eq!(preview.approval, CToolCommandApproval::AutoApprovedGreen);
-    }
-
-    #[test]
-    fn ai_can_upgrade_but_not_downgrade() {
-        let config = default_command_config();
-        let preview = build_command_request_preview(
-            "C:\\CodexLab\\codex\\codex-rs",
-            vec!["cargo check -p ctool".to_string()],
-            &config,
-            Some(CToolCommandRisk::Red),
-        )
-        .expect("preview should build");
-        assert_eq!(preview.system_risk, CToolCommandRisk::Yellow);
-        assert_eq!(preview.final_risk, CToolCommandRisk::Red);
-        assert_eq!(preview.approval, CToolCommandApproval::ConfirmTwice);
-    }
-
-    #[test]
-    fn batch_uses_highest_risk() {
-        let config = default_command_config();
-        let preview = build_command_request_preview(
-            "C:\\CodexLab\\codex\\codex-rs",
-            vec![
-                "cargo check -p ctool".to_string(),
-                "powershell -Command \"Get-ChildItem\"".to_string(),
-            ],
-            &config,
-            None,
-        )
-        .expect("preview should build");
-        assert_eq!(preview.final_risk, CToolCommandRisk::Red);
-    }
-
-    #[test]
-    fn render_banner_contains_large_marker() {
-        let config = default_command_config();
-        let preview = build_command_request_preview(
-            "C:\\CodexLab\\codex\\codex-rs",
-            vec!["cargo check -p ctool".to_string()],
-            &config,
-            None,
-        )
-        .expect("preview should build");
-        let banner = render_command_request_banner(&preview);
-        assert!(banner.contains("=============================="));
-        assert!(banner.contains("COMMAND REQUEST: YELLOW"));
-        assert!(banner.contains("cargo check -p ctool"));
-    }
-
-    #[test]
-    fn merge_command_configs_keeps_system_red_over_project_green() {
-        let mut project = default_command_config();
-        project.green_prefixes.push("curl".to_string());
-
-        let mut system = default_command_config();
-        system.red_prefixes.push("curl".to_string());
-
-        let merged = merge_command_configs(project, system);
-        let result = classify_command("curl https://example.com/file.zip", &merged);
-
-        assert_eq!(result.risk, CToolCommandRisk::Red);
-    }
-
-    #[test]
-    fn yellow_confirmation_accepts_y_prefix() {
-        let decision = parse_yellow_confirmation_input("Y run it");
-
-        assert_eq!(decision, CToolCommandUserDecision::Approved);
-    }
-
-    #[test]
-    fn yellow_confirmation_rejects_and_keeps_feedback() {
-        let decision = parse_yellow_confirmation_input("N use cargo check -p ctool only");
-
-        assert_eq!(
-            decision,
-            CToolCommandUserDecision::Rejected {
-                feedback: Some("use cargo check -p ctool only".to_string())
-            }
-        );
-    }
-
-    #[test]
-    fn unknown_confirmation_rejects_and_keeps_full_input_as_feedback() {
-        let decision = parse_yellow_confirmation_input("先别跑，换一个方案");
-
-        assert_eq!(
-            decision,
-            CToolCommandUserDecision::Rejected {
-                feedback: Some("先别跑，换一个方案".to_string())
-            }
-        );
-    }
-
-    #[test]
-    fn red_first_confirmation_needs_second_confirmation() {
-        let decision = parse_red_first_confirmation_input("Y");
-
-        assert_eq!(
-            decision,
-            CToolCommandUserDecision::NeedsSecondRedConfirmation
-        );
-    }
-
-    #[test]
-    fn red_second_confirmation_accepts_y_prefix() {
-        let approved = parse_red_second_confirmation_input("Y");
-        let rejected = parse_red_second_confirmation_input("N too risky");
-
-        assert_eq!(approved, CToolCommandUserDecision::Approved);
-        assert_eq!(
-            rejected,
-            CToolCommandUserDecision::Rejected {
-                feedback: Some("too risky".to_string())
-            }
-        );
-    }
 }

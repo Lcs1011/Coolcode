@@ -121,13 +121,16 @@ fn ctool_description(name: &str, base_description: &str) -> String {
     "cargo check -p codex-core"
   ],
   "ai_risk_upgrade": null,
-  "reason": "Need compile errors after code changes."
+  "reason": "Need compile errors after code changes.",
+  "yellow_confirmation": null,
+  "red_first_confirmation": null,
+  "red_second_confirmation": null
 }
 
 Use this only when normal CTool file tools cannot complete the task.
 
 This is a controlled command request tool.
-It classifies every command as GREEN / YELLOW / RED, computes the highest batch risk,
+It classifies every command as GREEN / YELLOW / RED / BLOCKED, computes the highest batch risk,
 renders a very visible COMMAND REQUEST banner, and reports whether execution happened.
 
 Important display rule:
@@ -142,8 +145,11 @@ Rules:
 - Unknown commands are RED.
 - Downloads and opening websites are RED.
 - AI may upgrade risk, but cannot downgrade risk.
-- GREEN commands may auto-execute only when allowed by the user's whitelist.
-- YELLOW and RED commands never execute in this version."#
+- GREEN may auto-execute only by whitelist.
+- YELLOW executes only after user confirmation.
+- RED executes only after two user confirmations.
+- BLOCKED never executes and cannot be confirmed.
+- Never request Python installation, Python venv creation, pip install, conda environment creation, uv python install, pyenv, or Windows PATH changes for Python. These are BLOCKED."#
         }
         "ctool_list_directory" => {
             r#"Input JSON:
@@ -254,6 +260,20 @@ Counts matching text lines without returning every matching line. Use this to es
 }
 
 Extracts matching lines as a list. unique/sort help collect failure names or summaries."#
+        }
+        "ctool_annotate_markdown" => {
+            r#"Input JSON:
+{
+  "path": "relative/or/absolute/file.md",
+  "target_text": "exact text to wrap with mark tags",
+  "annotation_kind": "normal",
+  "annotation_direction": "up",
+  "occurrence": null,
+  "allow_readonly": true,
+  "dry_run": true
+}
+
+Adds a Markdown <mark> annotation. annotation_kind is normal or important. annotation_direction is up/down/null; up inserts ↑ before the annotated text and down inserts ↓ before it. Only .md/.markdown files are supported. Rejects targets inside fenced code blocks, inline code, YAML front matter, or HTML comments. Can use the narrow ReadOnly exception only for this Markdown annotation operation."#
         }
         "ctool_edit_replace" => {
             r#"Input JSON:
