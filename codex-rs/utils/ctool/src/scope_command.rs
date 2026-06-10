@@ -13,13 +13,32 @@ use crate::scope_context::normalize_scope_config;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CToolScopeCommand {
     Show,
-    AddVisible(PathBuf),
-    RemoveVisible(PathBuf),
-    AddHide(PathBuf),
-    RemoveHide(PathBuf),
-    AddProtected(PathBuf),
-    RemoveProtected(PathBuf),
+    UpdateRule {
+        target: CToolScopeTarget,
+        rule: CToolScopeRule,
+        action: CToolScopeAction,
+        path: PathBuf,
+    },
     SetBaseScope(CToolScopeBase),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CToolScopeTarget {
+    File,
+    Folder,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CToolScopeRule {
+    Readwrite,
+    Readonly,
+    Hide,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CToolScopeAction {
+    Add,
+    Remove,
 }
 
 pub fn parse_ctool_scope_command(input: &str) -> CToolResult<CToolScopeCommand> {
@@ -44,45 +63,59 @@ pub fn parse_ctool_scope_command(input: &str) -> CToolResult<CToolScopeCommand> 
         return Ok(CToolScopeCommand::Show);
     }
 
-    let action = tokens[1].to_ascii_lowercase();
-
-    match action.as_str() {
+    match tokens[1].to_ascii_lowercase().as_str() {
         "show" => {
             ensure_token_len(&tokens, 2)?;
             Ok(CToolScopeCommand::Show)
-        }
-        "-" => {
-            let path = parse_path_from_tokens(&tokens, 2)?;
-            Ok(CToolScopeCommand::RemoveVisible(path))
-        }
-        "hide" => {
-            if tokens.get(2).is_some_and(|token| *token == "-") {
-                let path = parse_path_from_tokens(&tokens, 3)?;
-                Ok(CToolScopeCommand::RemoveHide(path))
-            } else {
-                let path = parse_path_from_tokens(&tokens, 2)?;
-                Ok(CToolScopeCommand::AddHide(path))
-            }
-        }
-        "protect" => {
-            if tokens.get(2).is_some_and(|token| *token == "-") {
-                let path = parse_path_from_tokens(&tokens, 3)?;
-                Ok(CToolScopeCommand::RemoveProtected(path))
-            } else {
-                let path = parse_path_from_tokens(&tokens, 2)?;
-                Ok(CToolScopeCommand::AddProtected(path))
-            }
         }
         "base" => {
             ensure_token_len(&tokens, 3)?;
             let base_scope = parse_base_scope(tokens[2])?;
             Ok(CToolScopeCommand::SetBaseScope(base_scope))
         }
-        _ => {
-            let path = parse_path_from_tokens(&tokens, 1)?;
-            Ok(CToolScopeCommand::AddVisible(path))
-        }
+        _ => parse_scope_rule_command(&tokens),
     }
+}
+
+fn parse_scope_rule_command(tokens: &[&str]) -> CToolResult<CToolScopeCommand> {
+    let mut index = 1;
+    let target = if tokens
+        .get(index)
+        .is_some_and(|token| token.eq_ignore_ascii_case("f"))
+    {
+        index += 1;
+        CToolScopeTarget::File
+    } else {
+        CToolScopeTarget::Folder
+    };
+
+    let rule = match tokens.get(index).map(|token| token.to_ascii_lowercase()) {
+        Some(token) if token == "ro" => {
+            index += 1;
+            CToolScopeRule::Readonly
+        }
+        Some(token) if token == "hide" => {
+            index += 1;
+            CToolScopeRule::Hide
+        }
+        _ => CToolScopeRule::Readwrite,
+    };
+
+    let action = if tokens.get(index).is_some_and(|token| *token == "-") {
+        index += 1;
+        CToolScopeAction::Remove
+    } else {
+        CToolScopeAction::Add
+    };
+
+    let path = parse_path_from_tokens(tokens, index)?;
+
+    Ok(CToolScopeCommand::UpdateRule {
+        target,
+        rule,
+        action,
+        path,
+    })
 }
 
 pub fn handle_ctool_scope_command(
@@ -93,34 +126,28 @@ pub fn handle_ctool_scope_command(
         CToolScopeCommand::Show => Ok(show_ctool_scope(ctx)),
         CToolScopeCommand::SetBaseScope(base_scope) => {
             ctx.base_scope = base_scope;
+            save_session_base_scope(ctx, base_scope)?;
             Ok(format!(
                 "CToolScopeBase set to {} for current session.",
                 ctx.base_scope
             ))
         }
-        CToolScopeCommand::AddVisible(path) => {
-            update_user_config(ctx, |config| add_visible_path(config, path.clone()))?;
-            Ok(format!("Added visible path: {}", path.display()))
-        }
-        CToolScopeCommand::RemoveVisible(path) => {
-            update_user_config(ctx, |config| remove_visible_path(config, &path))?;
-            Ok(format!("Removed visible path: {}", path.display()))
-        }
-        CToolScopeCommand::AddHide(path) => {
-            update_user_config(ctx, |config| add_hide_path(config, path.clone()))?;
-            Ok(format!("Added hide path: {}", path.display()))
-        }
-        CToolScopeCommand::RemoveHide(path) => {
-            update_user_config(ctx, |config| remove_hide_path(config, &path))?;
-            Ok(format!("Removed hide path: {}", path.display()))
-        }
-        CToolScopeCommand::AddProtected(path) => {
-            update_user_config(ctx, |config| add_protected_path(config, path.clone()))?;
-            Ok(format!("Added protected path: {}", path.display()))
-        }
-        CToolScopeCommand::RemoveProtected(path) => {
-            update_user_config(ctx, |config| remove_protected_path(config, &path))?;
-            Ok(format!("Removed protected path: {}", path.display()))
+        CToolScopeCommand::UpdateRule {
+            target,
+            rule,
+            action,
+            path,
+        } => {
+            update_user_config(ctx, |config| {
+                update_scope_rule(config, target, rule, action, path.clone())
+            })?;
+            Ok(format!(
+                "{} {} {} path: {}",
+                action.past_tense(),
+                target.label(),
+                rule.label(),
+                path.display()
+            ))
         }
     }
 }
@@ -178,28 +205,114 @@ pub fn show_ctool_scope(ctx: &CToolScopeContext) -> String {
     output
 }
 
+impl CToolScopeTarget {
+    fn label(self) -> &'static str {
+        match self {
+            CToolScopeTarget::File => "file",
+            CToolScopeTarget::Folder => "folder",
+        }
+    }
+}
+
+impl CToolScopeRule {
+    fn label(self) -> &'static str {
+        match self {
+            CToolScopeRule::Readwrite => "readwrite",
+            CToolScopeRule::Readonly => "readonly",
+            CToolScopeRule::Hide => "hide",
+        }
+    }
+}
+
+impl CToolScopeAction {
+    fn past_tense(self) -> &'static str {
+        match self {
+            CToolScopeAction::Add => "Added",
+            CToolScopeAction::Remove => "Removed",
+        }
+    }
+}
+
 pub fn add_visible_path(config: &mut CToolScopeConfig, path: PathBuf) -> bool {
-    add_unique_path(&mut config.files.readwrite, path)
+    update_scope_rule(
+        config,
+        CToolScopeTarget::Folder,
+        CToolScopeRule::Readwrite,
+        CToolScopeAction::Add,
+        path,
+    )
 }
 
 pub fn remove_visible_path(config: &mut CToolScopeConfig, path: &Path) -> bool {
-    remove_path(&mut config.files.readwrite, path)
+    update_scope_rule(
+        config,
+        CToolScopeTarget::Folder,
+        CToolScopeRule::Readwrite,
+        CToolScopeAction::Remove,
+        path.to_path_buf(),
+    )
 }
 
 pub fn add_hide_path(config: &mut CToolScopeConfig, path: PathBuf) -> bool {
-    add_unique_path(&mut config.files.hide, path)
+    update_scope_rule(
+        config,
+        CToolScopeTarget::Folder,
+        CToolScopeRule::Hide,
+        CToolScopeAction::Add,
+        path,
+    )
 }
 
 pub fn remove_hide_path(config: &mut CToolScopeConfig, path: &Path) -> bool {
-    remove_path(&mut config.files.hide, path)
+    update_scope_rule(
+        config,
+        CToolScopeTarget::Folder,
+        CToolScopeRule::Hide,
+        CToolScopeAction::Remove,
+        path.to_path_buf(),
+    )
 }
 
 pub fn add_protected_path(config: &mut CToolScopeConfig, path: PathBuf) -> bool {
-    add_unique_path(&mut config.files.readonly, path)
+    update_scope_rule(
+        config,
+        CToolScopeTarget::Folder,
+        CToolScopeRule::Readonly,
+        CToolScopeAction::Add,
+        path,
+    )
 }
 
 pub fn remove_protected_path(config: &mut CToolScopeConfig, path: &Path) -> bool {
-    remove_path(&mut config.files.readonly, path)
+    update_scope_rule(
+        config,
+        CToolScopeTarget::Folder,
+        CToolScopeRule::Readonly,
+        CToolScopeAction::Remove,
+        path.to_path_buf(),
+    )
+}
+
+fn update_scope_rule(
+    config: &mut CToolScopeConfig,
+    target: CToolScopeTarget,
+    rule: CToolScopeRule,
+    action: CToolScopeAction,
+    path: PathBuf,
+) -> bool {
+    let paths = match (target, rule) {
+        (CToolScopeTarget::File, CToolScopeRule::Readwrite) => &mut config.files.readwrite,
+        (CToolScopeTarget::File, CToolScopeRule::Readonly) => &mut config.files.readonly,
+        (CToolScopeTarget::File, CToolScopeRule::Hide) => &mut config.files.hide,
+        (CToolScopeTarget::Folder, CToolScopeRule::Readwrite) => &mut config.folders.readwrite,
+        (CToolScopeTarget::Folder, CToolScopeRule::Readonly) => &mut config.folders.readonly,
+        (CToolScopeTarget::Folder, CToolScopeRule::Hide) => &mut config.folders.hide,
+    };
+
+    match action {
+        CToolScopeAction::Add => add_unique_path(paths, path),
+        CToolScopeAction::Remove => remove_path(paths, &path),
+    }
 }
 
 pub fn save_current_dir_cool_config(path: &Path, config: &CToolScopeConfig) -> CToolResult<()> {
@@ -219,6 +332,60 @@ pub fn save_current_dir_cool_config(path: &Path, config: &CToolScopeConfig) -> C
     std::fs::write(path, text).map_err(|error| {
         CToolError::InvalidInput(format!(
             "failed to save Cool config file: {} ({error})",
+            path.display()
+        ))
+    })
+}
+
+fn save_session_base_scope(ctx: &CToolScopeContext, base_scope: CToolScopeBase) -> CToolResult<()> {
+    let path = &ctx.session_config_path;
+    let mut value = if path.exists() {
+        let text = std::fs::read_to_string(path).map_err(|error| {
+            CToolError::InvalidInput(format!(
+                "failed to read Cool session config file: {} ({error})",
+                path.display()
+            ))
+        })?;
+        toml::from_str::<toml::Value>(&text).map_err(|error| {
+            CToolError::InvalidInput(format!(
+                "failed to parse Cool session config file: {} ({error})",
+                path.display()
+            ))
+        })?
+    } else {
+        toml::Value::Table(toml::map::Map::new())
+    };
+
+    let Some(table) = value.as_table_mut() else {
+        return Err(CToolError::InvalidInput(format!(
+            "Cool session config must be a TOML table: {}",
+            path.display()
+        )));
+    };
+
+    table.insert(
+        "ctool_scope_base".to_string(),
+        toml::Value::String(base_scope.as_str().to_string()),
+    );
+
+    let text = toml::to_string_pretty(&value).map_err(|error| {
+        CToolError::InvalidInput(format!(
+            "failed to serialize Cool session config TOML: {error}"
+        ))
+    })?;
+
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| {
+            CToolError::InvalidInput(format!(
+                "failed to create Cool config directory: {} ({error})",
+                parent.display()
+            ))
+        })?;
+    }
+
+    std::fs::write(path, text).map_err(|error| {
+        CToolError::InvalidInput(format!(
+            "failed to save Cool session config file: {} ({error})",
             path.display()
         ))
     })

@@ -69,19 +69,20 @@ pub fn read_file(
 
     let bytes = std::fs::read(&path)?;
     let byte_len = bytes.len() as u64;
-    let truncated = byte_len > input.max_bytes;
-    let usable_bytes = if truncated {
-        &bytes[..input.max_bytes as usize]
-    } else {
-        &bytes
-    };
-
-    let content = String::from_utf8(usable_bytes.to_vec()).map_err(|error| {
+    let text = std::str::from_utf8(&bytes).map_err(|error| {
         CToolError::InvalidInput(format!(
             "file is not valid UTF-8 text: {} ({error})",
             path.display()
         ))
     })?;
+
+    let truncated = byte_len > input.max_bytes;
+    let usable_len = if truncated {
+        utf8_prefix_len(text, input.max_bytes as usize)
+    } else {
+        text.len()
+    };
+    let content = text[..usable_len].to_string();
 
     Ok(CToolReadFileOutput {
         path: path.display().to_string(),
@@ -89,6 +90,16 @@ pub fn read_file(
         truncated,
         content,
     })
+}
+
+fn utf8_prefix_len(text: &str, max_len: usize) -> usize {
+    let mut len = max_len.min(text.len());
+
+    while !text.is_char_boundary(len) {
+        len -= 1;
+    }
+
+    len
 }
 
 fn default_max_bytes() -> u64 {

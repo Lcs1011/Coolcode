@@ -187,20 +187,24 @@ fn search_path(
         }
 
         let path = entry.path();
-        search_path(
-            ctx,
-            root,
-            &path,
-            original_query,
-            needle,
-            case_sensitive,
-            depth + 1,
-            max_depth,
-            max_results,
-            include_hidden,
-            matches,
-            truncated,
-        )?;
+        match gate::ensure_search_allowed(ctx, &path) {
+            Ok(path) => search_path(
+                ctx,
+                root,
+                &path,
+                original_query,
+                needle,
+                case_sensitive,
+                depth + 1,
+                max_depth,
+                max_results,
+                include_hidden,
+                matches,
+                truncated,
+            )?,
+            Err(CToolError::OutOfScope { .. }) => continue,
+            Err(error) => return Err(error),
+        }
     }
 
     Ok(())

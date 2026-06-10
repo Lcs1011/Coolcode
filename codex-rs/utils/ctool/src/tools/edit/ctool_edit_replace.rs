@@ -49,6 +49,7 @@ pub fn edit_replace(
     ctx: &CToolContext,
     input: CToolEditReplaceInput,
 ) -> CToolResult<CToolEditReplaceOutput> {
+    gate::ensure_read_allowed(ctx, &input.path)?;
     let path = gate::ensure_write_allowed(ctx, &input.path)?;
 
     let before = std::fs::read_to_string(&path)?;

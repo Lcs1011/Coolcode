@@ -56,7 +56,7 @@ pub fn delete_directory(
         )));
     }
 
-    ensure_not_current_dir(ctx, &path)?;
+    ensure_not_cool_workspace(ctx, &path)?;
 
     if std::fs::read_dir(&path)?.next().is_some() {
         return Err(CToolError::InvalidInput(format!(
@@ -73,13 +73,13 @@ pub fn delete_directory(
     })
 }
 
-fn ensure_not_current_dir(ctx: &CToolContext, path: &Path) -> CToolResult<()> {
+fn ensure_not_cool_workspace(ctx: &CToolContext, path: &Path) -> CToolResult<()> {
     let path = std::fs::canonicalize(path)?;
-    let current_dir = std::fs::canonicalize(&ctx.scope_context.cool_workspace)?;
+    let cool_workspace = std::fs::canonicalize(&ctx.scope_context.cool_workspace)?;
 
-    if path == current_dir {
+    if path == cool_workspace {
         return Err(CToolError::InvalidInput(format!(
-            "refusing to delete current dir: {}",
+            "refusing to delete CoolWorkspace root: {}",
             path.display()
         )));
     }

@@ -160,7 +160,8 @@ pub fn is_visible_by_base_scope(ctx: &CToolScopeContext, path: impl AsRef<Path>)
     match ctx.base_scope {
         CToolScopeBase::None => false,
         CToolScopeBase::CoolWorkspace => path_matches_rule(path, &ctx.cool_workspace),
-        CToolScopeBase::SelectedOnly | CToolScopeBase::TheEyeofProvidence => false,
+        CToolScopeBase::SelectedOnly => false,
+        CToolScopeBase::TheEyeofProvidence => true,
     }
 }
 

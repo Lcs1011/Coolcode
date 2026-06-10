@@ -58,7 +58,7 @@ pub fn move_directory(
         )));
     }
 
-    ensure_not_current_dir(ctx, &from)?;
+    ensure_not_cool_workspace(ctx, &from)?;
     ensure_target_not_inside_source(&from, &to)?;
 
     if to.exists() {
@@ -77,13 +77,13 @@ pub fn move_directory(
     })
 }
 
-fn ensure_not_current_dir(ctx: &CToolContext, path: &Path) -> CToolResult<()> {
+fn ensure_not_cool_workspace(ctx: &CToolContext, path: &Path) -> CToolResult<()> {
     let path = std::fs::canonicalize(path)?;
-    let current_dir = std::fs::canonicalize(&ctx.scope_context.cool_workspace)?;
+    let cool_workspace = std::fs::canonicalize(&ctx.scope_context.cool_workspace)?;
 
-    if path == current_dir {
+    if path == cool_workspace {
         return Err(CToolError::InvalidInput(format!(
-            "refusing to move current dir: {}",
+            "refusing to move CoolWorkspace root: {}",
             path.display()
         )));
     }

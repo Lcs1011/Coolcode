@@ -188,6 +188,73 @@ Use this to read a specific inclusive line range from a UTF-8 text file."#
 
 Use this to read one small UTF-8 text/config/source file."#
         }
+        "ctool_tail_file" => {
+            r#"Input JSON:
+{
+  "path": "logs/test.log",
+  "lines": 200,
+  "max_bytes": 65536
+}
+
+Reads the tail of one UTF-8 text file. Useful for test logs and long command logs."#
+        }
+        "ctool_rg_search_context" => {
+            r#"Input JSON:
+{
+  "path": ".",
+  "query": "error text",
+  "before": 2,
+  "after": 2,
+  "case_sensitive": false,
+  "max_depth": 6,
+  "max_results": 100,
+  "include_hidden": false
+}
+
+Searches literal text and returns matching lines with surrounding context."#
+        }
+        "ctool_regex_search" => {
+            r#"Input JSON:
+{
+  "path": ".",
+  "pattern": "test_.*failed|ERROR\\d+",
+  "case_sensitive": false,
+  "max_depth": 6,
+  "max_results": 100,
+  "include_hidden": false
+}
+
+Searches UTF-8 text files using a Rust regex."#
+        }
+        "ctool_count_matches" => {
+            r#"Input JSON:
+{
+  "path": ".",
+  "query": "failure text or regex",
+  "is_regex": false,
+  "case_sensitive": false,
+  "max_depth": 6,
+  "include_hidden": false
+}
+
+Counts matching text lines without returning every matching line. Use this to estimate problem scale."#
+        }
+        "ctool_extract_lines_matching" => {
+            r#"Input JSON:
+{
+  "path": ".",
+  "query": "failure text or regex",
+  "is_regex": false,
+  "case_sensitive": false,
+  "unique": true,
+  "sort": true,
+  "max_depth": 6,
+  "max_results": 100,
+  "include_hidden": false
+}
+
+Extracts matching lines as a list. unique/sort help collect failure names or summaries."#
+        }
         "ctool_edit_replace" => {
             r#"Input JSON:
 {

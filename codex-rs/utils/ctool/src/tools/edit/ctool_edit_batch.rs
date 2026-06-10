@@ -87,6 +87,7 @@ pub fn edit_batch(
                 old_string,
                 new_string,
             } => {
+                gate::ensure_read_allowed(ctx, &path)?;
                 let path = gate::ensure_write_allowed(ctx, &path)?;
 
                 if !text_by_path.contains_key(&path) {
@@ -104,6 +105,7 @@ pub fn edit_batch(
                 insert_after_line,
                 content,
             } => {
+                gate::ensure_read_allowed(ctx, &path)?;
                 let path = gate::ensure_write_allowed(ctx, &path)?;
 
                 if !text_by_path.contains_key(&path) {

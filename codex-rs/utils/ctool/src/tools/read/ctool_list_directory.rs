@@ -137,7 +137,11 @@ fn collect_directory_items(
             continue;
         }
 
-        let path = gate::ensure_read_allowed(ctx, &entry.path())?;
+        let path = match gate::ensure_read_allowed(ctx, &entry.path()) {
+            Ok(path) => path,
+            Err(CToolError::OutOfScope { .. }) => continue,
+            Err(error) => return Err(error),
+        };
 
         let file_type = entry.file_type()?;
         let kind = if file_type.is_dir() {

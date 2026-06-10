@@ -10,6 +10,7 @@ use crate::error::CToolResult;
 use crate::gate;
 use crate::tool::CTool;
 use crate::tool::CToolSpec;
+use crate::tools::file_ops::ensure_safe_text_file_extension;
 
 pub const CTOOL_MOVE_FILE_TOOL_NAME: &str = "ctool_move_file";
 
@@ -51,6 +52,7 @@ pub fn move_file(
     input: CToolMoveFileInput,
 ) -> CToolResult<CToolMoveFileOutput> {
     let (from, to) = gate::ensure_move_allowed(ctx, &input.from, &input.to)?;
+    ensure_safe_text_file_extension(&to, "move_file")?;
 
     let from_metadata = std::fs::metadata(&from)?;
     if !from_metadata.is_file() {

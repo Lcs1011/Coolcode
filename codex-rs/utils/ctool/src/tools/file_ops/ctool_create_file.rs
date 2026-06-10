@@ -1,4 +1,3 @@
-use std::path::Path;
 use std::path::PathBuf;
 
 use serde::Deserialize;
@@ -9,6 +8,7 @@ use crate::context::CToolContext;
 use crate::error::CToolError;
 use crate::error::CToolResult;
 use crate::gate;
+use crate::tools::file_ops::ensure_safe_text_file_extension;
 use crate::tool::CTool;
 use crate::tool::CToolSpec;
 
@@ -53,7 +53,7 @@ pub fn create_file(
     input: CToolCreateFileInput,
 ) -> CToolResult<CToolCreateFileOutput> {
     let path = gate::ensure_create_allowed(ctx, &input.path)?;
-    ensure_safe_create_extension(&path)?;
+    ensure_safe_text_file_extension(&path, "create_file")?;
 
     let byte_len = input.content.len();
     if byte_len > MAX_CREATE_FILE_BYTES {
@@ -89,61 +89,4 @@ pub fn create_file(
         byte_len,
         overwritten: existed,
     })
-}
-
-fn ensure_safe_create_extension(path: &Path) -> CToolResult<()> {
-    let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
-        return Err(CToolError::InvalidInput(format!(
-            "invalid file name: {}",
-            path.display()
-        )));
-    };
-
-    if file_name == ".gitignore" {
-        return Ok(());
-    }
-
-    let Some(extension) = path.extension().and_then(|ext| ext.to_str()) else {
-        return Err(CToolError::InvalidInput(format!(
-            "file extension is required for create_file: {}",
-            path.display()
-        )));
-    };
-
-    let extension = extension.to_ascii_lowercase();
-    let allowed = matches!(
-        extension.as_str(),
-        "rs" | "toml"
-            | "md"
-            | "txt"
-            | "json"
-            | "jsonl"
-            | "yaml"
-            | "yml"
-            | "css"
-            | "html"
-            | "js"
-            | "jsx"
-            | "ts"
-            | "tsx"
-            | "c"
-            | "cpp"
-            | "h"
-            | "hpp"
-            | "cs"
-            | "java"
-            | "go"
-            | "py"
-            | "lua"
-            | "ini"
-            | "cfg"
-    );
-
-    if allowed {
-        Ok(())
-    } else {
-        Err(CToolError::InvalidInput(format!(
-            "create_file does not allow this extension: .{extension}"
-        )))
-    }
 }

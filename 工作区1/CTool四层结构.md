@@ -70,6 +70,17 @@ CoolWorkspace 路径
 
 ## 第4层 CTool
 
+
+1/
+CTool  制作 要考虑它的操作权限范围。 必须要符合我们的视野规则。
+2/
+然后 一定要让 CoolReadWrite 这个 CommissionProfile  启动的时候能知道自己当下可调用的工具都有哪些。 具体该怎么用。
+3/ 
+CTool 都属于安全级别非常高的工具。 
+除 CToolCommandRequest 和 CToolTavilySearch 之外
+不能有 联网、下载和 编译可执行文件能力
+
+
 ### 读取工具
 
 | 功能                  | Rust 类型名             | 文件名                        | 工具名                     |
@@ -99,6 +110,10 @@ CoolWorkspace 路径
 | 创建文件夹       | `CToolCreateDirectory` | `ctool_create_directory.rs` | `ctool_create_directory` |
 | 删除文件夹       | `CToolDeleteDirectory` | `ctool_delete_directory.rs` | `ctool_delete_directory` |
 | 移动 / 重命名文件夹 | `CToolMoveDirectory`   | `ctool_move_directory.rs`   | `ctool_move_directory`   |
+
+/
+
+
 ### Telegram 对话工具
 
 | 功能     | Rust 类型名                   | 文件名                              | 工具名                           |
