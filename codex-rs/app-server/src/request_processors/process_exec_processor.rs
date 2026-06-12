@@ -70,6 +70,11 @@ impl ProcessExecRequestProcessor {
         request_id: ConnectionRequestId,
         params: ProcessSpawnParams,
     ) -> Result<(), JSONRPCErrorError> {
+        if codex_utils_safety::safe_mode::enabled() {
+            return Err(invalid_request(
+                "process/spawn is disabled in SafeMode. Please use CTool instead.",
+            ));
+        }
         self.require_local_environment()?;
         let ProcessSpawnParams {
             command,

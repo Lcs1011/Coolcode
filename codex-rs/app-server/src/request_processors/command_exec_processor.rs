@@ -100,6 +100,11 @@ impl CommandExecRequestProcessor {
         request_id: ConnectionRequestId,
         params: CommandExecParams,
     ) -> Result<(), JSONRPCErrorError> {
+        if codex_utils_safety::safe_mode::enabled() {
+            return Err(invalid_request(
+                "command/exec is disabled in SafeMode. Please use ctool_command_request instead.",
+            ));
+        }
         tracing::debug!("ExecOneOffCommand params: {params:?}");
 
         let request = request_id.clone();

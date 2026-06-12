@@ -1,4 +1,5 @@
 use super::*;
+
 use codex_utils_absolute_path::AbsolutePathBuf;
 use codex_utils_absolute_path::AbsolutePathBufGuard;
 use pretty_assertions::assert_eq;
@@ -8,9 +9,10 @@ use tempfile::tempdir;
 #[test]
 fn test_deserialize_ollama_model_provider_toml() {
     let azure_provider_toml = r#"
-name = "Ollama"
-base_url = "http://localhost:11434/v1"
-        "#;
+        name = "Ollama"
+        base_url = "http://localhost:11434/v1"
+    "#;
+
     let expected_provider = ModelProviderInfo {
         name: "Ollama".into(),
         base_url: Some("http://localhost:11434/v1".into()),
@@ -18,7 +20,6 @@ base_url = "http://localhost:11434/v1"
         env_key_instructions: None,
         experimental_bearer_token: None,
         auth: None,
-        aws: None,
         wire_api: WireApi::Responses,
         query_params: None,
         http_headers: None,
@@ -38,11 +39,12 @@ base_url = "http://localhost:11434/v1"
 #[test]
 fn test_deserialize_azure_model_provider_toml() {
     let azure_provider_toml = r#"
-name = "Azure"
-base_url = "https://xxxxx.openai.azure.com/openai"
-env_key = "AZURE_OPENAI_API_KEY"
-query_params = { api-version = "2025-04-01-preview" }
-        "#;
+        name = "Azure"
+        base_url = "https://xxxxx.openai.azure.com/openai"
+        env_key = "AZURE_OPENAI_API_KEY"
+        query_params = { api-version = "2025-04-01-preview" }
+    "#;
+
     let expected_provider = ModelProviderInfo {
         name: "Azure".into(),
         base_url: Some("https://xxxxx.openai.azure.com/openai".into()),
@@ -50,7 +52,6 @@ query_params = { api-version = "2025-04-01-preview" }
         env_key_instructions: None,
         experimental_bearer_token: None,
         auth: None,
-        aws: None,
         wire_api: WireApi::Responses,
         query_params: Some(maplit::hashmap! {
             "api-version".to_string() => "2025-04-01-preview".to_string(),
@@ -72,12 +73,13 @@ query_params = { api-version = "2025-04-01-preview" }
 #[test]
 fn test_deserialize_example_model_provider_toml() {
     let azure_provider_toml = r#"
-name = "Example"
-base_url = "https://example.com"
-env_key = "API_KEY"
-http_headers = { "X-Example-Header" = "example-value" }
-env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
-        "#;
+        name = "Example"
+        base_url = "https://example.com"
+        env_key = "API_KEY"
+        http_headers = { "X-Example-Header" = "example-value" }
+        env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
+    "#;
+
     let expected_provider = ModelProviderInfo {
         name: "Example".into(),
         base_url: Some("https://example.com".into()),
@@ -85,7 +87,6 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
         env_key_instructions: None,
         experimental_bearer_token: None,
         auth: None,
-        aws: None,
         wire_api: WireApi::Responses,
         query_params: None,
         http_headers: Some(maplit::hashmap! {
@@ -109,11 +110,11 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
 #[test]
 fn test_deserialize_chat_wire_api_shows_helpful_error() {
     let provider_toml = r#"
-name = "OpenAI using Chat Completions"
-base_url = "https://api.openai.com/v1"
-env_key = "OPENAI_API_KEY"
-wire_api = "chat"
-        "#;
+        name = "OpenAI using Chat Completions"
+        base_url = "https://api.openai.com/v1"
+        env_key = "OPENAI_API_KEY"
+        wire_api = "chat"
+    "#;
 
     let err = toml::from_str::<ModelProviderInfo>(provider_toml).unwrap_err();
     assert!(err.to_string().contains(CHAT_WIRE_API_REMOVED_ERROR));
@@ -122,11 +123,11 @@ wire_api = "chat"
 #[test]
 fn test_deserialize_websocket_connect_timeout() {
     let provider_toml = r#"
-name = "OpenAI"
-base_url = "https://api.openai.com/v1"
-websocket_connect_timeout_ms = 15000
-supports_websockets = true
-        "#;
+        name = "OpenAI"
+        base_url = "https://api.openai.com/v1"
+        websocket_connect_timeout_ms = 15000
+        supports_websockets = true
+    "#;
 
     let provider: ModelProviderInfo = toml::from_str(provider_toml).unwrap();
     assert_eq!(provider.websocket_connect_timeout_ms, Some(15_000));
@@ -135,7 +136,6 @@ supports_websockets = true
 #[test]
 fn test_supports_remote_compaction_for_openai() {
     let provider = ModelProviderInfo::create_openai_provider(/*base_url*/ None);
-
     assert!(provider.supports_remote_compaction());
 }
 
@@ -157,7 +157,6 @@ fn test_supports_remote_compaction_for_azure_name() {
         env_key_instructions: None,
         experimental_bearer_token: None,
         auth: None,
-        aws: None,
         wire_api: WireApi::Responses,
         query_params: None,
         http_headers: None,
@@ -182,7 +181,6 @@ fn test_supports_remote_compaction_for_non_openai_non_azure_provider() {
         env_key_instructions: None,
         experimental_bearer_token: None,
         auth: None,
-        aws: None,
         wire_api: WireApi::Responses,
         query_params: None,
         http_headers: None,
@@ -201,13 +199,14 @@ fn test_supports_remote_compaction_for_non_openai_non_azure_provider() {
 #[test]
 fn test_deserialize_provider_auth_config_defaults() {
     let base_dir = tempdir().unwrap();
-    let provider_toml = r#"
-name = "Corp"
 
-[auth]
-command = "./scripts/print-token"
-args = ["--format=text"]
-        "#;
+    let provider_toml = r#"
+        name = "Corp"
+
+        [auth]
+        command = "./scripts/print-token"
+        args = ["--format=text"]
+    "#;
 
     let provider: ModelProviderInfo = {
         let _guard = AbsolutePathBufGuard::new(base_dir.path());
@@ -233,6 +232,7 @@ fn test_merge_configured_model_providers_adds_custom_provider() {
         base_url: Some("https://example.com/v1".to_string()),
         ..ModelProviderInfo::default()
     };
+
     let configured_model_providers =
         std::collections::HashMap::from([("custom".to_string(), custom_provider.clone())]);
 
@@ -251,13 +251,14 @@ fn test_merge_configured_model_providers_adds_custom_provider() {
 #[test]
 fn test_deserialize_provider_auth_config_allows_zero_refresh_interval() {
     let base_dir = tempdir().unwrap();
-    let provider_toml = r#"
-name = "Corp"
 
-[auth]
-command = "./scripts/print-token"
-refresh_interval_ms = 0
-        "#;
+    let provider_toml = r#"
+        name = "Corp"
+
+        [auth]
+        command = "./scripts/print-token"
+        refresh_interval_ms = 0
+    "#;
 
     let provider: ModelProviderInfo = {
         let _guard = AbsolutePathBufGuard::new(base_dir.path());

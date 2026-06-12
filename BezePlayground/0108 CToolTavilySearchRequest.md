@@ -1,35 +1,5 @@
 
 
-Token
-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
-
-
-
-位于 CoolSystemDir\tavily.toml 中设置tocken
-
-示范：(里面的 token 是瞎写的)
-
-``` toml
-  enabled = true  # 表示是否允许使用
-
-  [[tokens]]
-  name = "main"
-  api_key = "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"
-  enabled = true
-
-  [[tokens]]
-  name = "backup_1"
-  api_key = "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"
-  enabled = true
-
-  [[tokens]]
-  name = "backup_2"
-  api_key = "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"
-  enabled = false
-```
-
-#### KP
-toml文件需要用 # 注释而不是 ///
 
 
 
