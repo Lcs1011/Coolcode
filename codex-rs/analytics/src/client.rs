@@ -68,8 +68,16 @@ impl AnalyticsEventsQueue {
         }
     }
 
-    fn try_send(&self, _input: AnalyticsFact) {
-        // Analytics disabled in secure build.
+    fn try_send(&self, input: AnalyticsFact) {
+        #[cfg(test)]
+        {
+            let _ = self.sender.try_send(input);
+        }
+        #[cfg(not(test))]
+        {
+            let _ = input;
+            // Analytics disabled in secure build.
+        }
     }
 
     pub(crate) fn should_enqueue_app_used(
@@ -292,8 +300,19 @@ impl AnalyticsEventsClient {
         ));
     }
 
-    pub(crate) fn record_fact(&self, _input: AnalyticsFact) {
-        // Analytics disabled in secure build.
+    pub(crate) fn record_fact(&self, input: AnalyticsFact) {
+        #[cfg(test)]
+        {
+            let Some(queue) = self.queue.as_ref() else {
+                return;
+            };
+            queue.try_send(input);
+        }
+        #[cfg(not(test))]
+        {
+            let _ = input;
+            // Analytics disabled in secure build.
+        }
     }
 
     pub fn track_response(
