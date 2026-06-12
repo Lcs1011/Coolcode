@@ -382,12 +382,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "0001 SafeMode.md",
+                "file": "0005 对于Skill 和Plugin的安全策略.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "0001 SafeMode"
+              "title": "0005 对于Skill 和Plugin的安全策略"
             }
           }
         ],
@@ -464,13 +464,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "傻瓜指令.md",
+                "file": "0005 对于Skill 和Plugin的安全策略.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "傻瓜指令 的大纲"
+              "title": "0005 对于Skill 和Plugin的安全策略 的大纲"
             }
           },
           {
@@ -552,22 +552,22 @@
       "bases:新建数据库": false
     }
   },
-  "active": "aabb8d715d0af5bd",
+  "active": "272a0f51769bcb0f",
   "lastOpenFiles": [
-    "0001 SafeMode.md",
     "未命名 3.md",
-    "0000 CoolCodex 产品大纲.md",
     "傻瓜指令.md",
+    "通用制作规划.md",
+    "读取 修改 创建 删除 门禁卡.md",
+    "0001 SafeMode.md",
+    "0000 CoolCodex 产品大纲.md",
     "你好，现在我正在制作一个项目。.md",
     "error.md",
     "未命名 2.md",
     "0005 对于Skill 和Plugin的安全策略.md",
     "回收站/制作规划.md",
     "0105 CTool 基础工具.md",
-    "通用制作规划.md",
     "未命名.md",
     "待办.md",
-    "读取 修改 创建 删除 门禁卡.md",
     "0108 CToolTavilySearchRequest.md",
     "0107 CToolCommandRequest.md",
     "回收站/CToolScope 视野详细设计 修订.md",

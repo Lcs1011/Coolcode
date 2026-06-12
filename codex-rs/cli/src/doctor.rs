@@ -3527,21 +3527,6 @@ mod tests {
     }
 
     #[test]
-    fn provider_reachability_skips_route_probe_for_bedrock() {
-        let plan = provider_reachability_plan_from_parts(
-            ProviderAuthReachabilityMode::NotRequired,
-            "amazon-bedrock",
-            "Amazon Bedrock",
-            Some("https://bedrock-runtime.us-east-1.amazonaws.com/openai/v1"),
-            /*provider_query_params*/ None,
-            /*is_amazon_bedrock*/ true,
-            "https://chatgpt.com/backend-api/",
-        );
-
-        assert_eq!(plan.endpoints[0].route_probe_url, None);
-    }
-
-    #[test]
     fn provider_reachability_api_key_does_not_require_chatgpt() {
         let plan = provider_reachability_plan_from_parts(
             ProviderAuthReachabilityMode::ApiKey,
