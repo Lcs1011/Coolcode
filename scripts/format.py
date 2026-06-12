@@ -36,7 +36,7 @@ class FormatterResult:
 
 def formatter_groups(*, check: bool) -> tuple[FormatterGroup, ...]:
     just_args = ["just", "--unstable", "--fmt"]
-    cargo_args = ["cargo", "fmt", "--", "--config", "imports_granularity=Item"]
+    cargo_args = ["cargo", "fmt"]
     # Use an unpinned overlay so Ruff is available without syncing project
     # dependencies. Each `--project` still retains its local configuration context.
     sdk_uv_run_args = [
@@ -89,7 +89,7 @@ def formatter_groups(*, check: bool) -> tuple[FormatterGroup, ...]:
             "Rust",
             # Stable rustfmt repeats a nightly-only `imports_granularity` warning
             # for each crate, so suppress that expected stderr noise.
-            (Command(tuple(cargo_args), CODEX_RS_ROOT, discard_stderr=True),),
+            (Command(tuple(cargo_args), CODEX_RS_ROOT, discard_stderr=False),),
         ),
         FormatterGroup(
             "Python SDK",

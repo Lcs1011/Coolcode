@@ -43,6 +43,10 @@ fn app_server_workspace_write_profile(extra_root: AbsolutePathBuf) -> Permission
                     access: FileSystemAccessMode::Write,
                 },
             ],
+            glob_scan_max_depth: None,
+        },
+    }
+}
 
 fn selected_permissions_popup_row(chat: &ChatWidget) -> String {
     let popup = render_bottom_popup(chat, /*width*/ 80);
@@ -59,15 +63,12 @@ fn move_permissions_popup_selection_to(chat: &mut ChatWidget, label: &str) {
         if selected_row.contains(label) {
             return;
         }
+
         chat.handle_key_event(KeyEvent::from(KeyCode::Down));
     }
 
     let popup = render_bottom_popup(chat, /*width*/ 80);
     panic!("failed to select permissions row containing {label:?}: {popup}");
-}
-            glob_scan_max_depth: None,
-        },
-    }
 }
 
 fn windows_sandbox_requirements_stack(
